@@ -25,6 +25,13 @@ void loop()
   leds.write(colors, 4);
 
   Serial.println('red'); // m is char*
+  
+  
+  // Sketch of eventual code
+  // Read switch values
+  // On switch change, set logic to change led colors
+  // write new colors
+  // On certain conditions (two reds in a row, etc) send serial command
 }
 
 rgb_color getRed() 
