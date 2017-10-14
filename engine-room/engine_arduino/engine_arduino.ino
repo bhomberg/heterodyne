@@ -7,20 +7,25 @@ void setup()
 {
   Serial.begin(9600); 
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(53, INPUT);
 }
 
 void loop() 
 {
-  // TEMP, delete once real LEDs come in
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(2000);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(2000);
+  delay(20);
   
-  colors[0] = getRed();
-  colors[1] = getBlue();
-  colors[2] = getGreen();
-  colors[3] = getYellow();
+  if (digitalRead(53)) 
+  {
+    colors[0] = getRed();
+    colors[1] = getBlue();
+    colors[2] = getGreen();
+    colors[3] = getYellow();
+  } else {
+    colors[0] = getBlue();
+    colors[1] = getYellow();
+    colors[2] = getYellow();
+    colors[3] = getBlue();
+  }
   
   leds.write(colors, 4);
 
@@ -34,7 +39,7 @@ void loop()
   // On certain conditions (two reds in a row, etc) send serial command
 }
 
-rgb_color getRed() 
+rgb_color getGreen() 
 {
   rgb_color color;
   color.red = 255;
@@ -52,7 +57,7 @@ rgb_color getBlue()
   return color;
 }
 
-rgb_color getGreen() 
+rgb_color getRed() 
 {
   rgb_color color;
   color.red = 0;
