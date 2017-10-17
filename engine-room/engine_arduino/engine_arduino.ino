@@ -1,6 +1,9 @@
 #include <PololuLedStrip.h>
 
+// instantiate light strip on pin 2
 PololuLedStrip<2> leds;
+
+// list of all led colors in order
 rgb_color colors[4];
 
 void setup() 
@@ -14,6 +17,7 @@ void loop()
 {
   delay(20);
   
+  // digitalRead of a pin is high if switch on, else low
   if (digitalRead(53)) 
   {
     colors[0] = getRed();
@@ -29,7 +33,7 @@ void loop()
   
   leds.write(colors, 4);
 
-  Serial.println('red'); // m is char*
+  Serial.println(10);
   
   
   // Sketch of eventual code
