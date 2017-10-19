@@ -15,7 +15,7 @@ void setup()
 
 void loop() 
 {
-  delay(20);
+  delay(2000);
   
   // digitalRead of a pin is high if switch on, else low
   if (digitalRead(53)) 
