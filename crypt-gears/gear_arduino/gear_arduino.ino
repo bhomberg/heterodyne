@@ -1,4 +1,4 @@
-// hard-coded pins
+// hard-coded pin numbers for input/output
 int gear_connections[3][12] = {{ 2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13}, 
                                {14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}, 
                                {26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37}};
@@ -12,7 +12,11 @@ int pot = A0;
 // TODO(bhomberg): calculate these numbers for real once mechanism is built; this is approx
 int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
 
-// TODO(benkraft): add any state variables you need
+// State of the output lights (should match output_lights).
+// Reset when you move any gears.  This is the only state we need;
+// everything about the positions of gears we determine at need.
+// When each of these are set to 1, you win!
+int correct_positions[7] = {0, 0, 0, 0, 0, 0, 0};
 
 // this runs once when the program starts
 void setup() 
@@ -149,8 +153,6 @@ void showCorrect(int n)
 // gears have been taken out / selector gear goes back to beginning, reset everything
 void reset()
 {
-  // TODO(benkraft): clear all known gears
-
   // turn off all lights
   for(int i=0; i<7; i++)
   {
@@ -159,6 +161,12 @@ void reset()
   for(int i=0; i<3; i++) 
   {
     digitalWrite(gear_lodged[i], LOW);
+  }
+
+  // reset internal state: you have to start over.
+  for(int i=0; i<7; i++)
+  {
+    correct_positions[i] = 0;
   }
 
   // TODO(bhomberg): close all solenoids (??)
