@@ -16,7 +16,8 @@ int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
 // Reset when you move any gears.  This is the only state we need;
 // everything about the positions of gears we determine at need.
 // When each of these are set to 1, you win!
-int correct_positions[7] = {0, 0, 0, 0, 0, 0, 0};
+boolean correct_positions[7] = {
+  false, false, false, false, false, false, false};
 
 // this runs once when the program starts
 void setup() 
@@ -79,6 +80,9 @@ void loop()
 
   // TODO(benkraft): figure out whether there is a connection on current
   // selector position
+  int selector_pos = getSelectorGearPosition();
+  correct_positions[selector_pos] = haveConnection(
+    selector_pos, gear_types, gear_orientations);
 
   // check if we won
   int winning = true;
@@ -93,8 +97,17 @@ void loop()
   if (winning)
   {
     sendCastleSuccessMessage();
-    // TODO(benkraft): Should we reset here or something?
   }
+}
+
+// Check if we have a connection.  rotation is the amount we have rotated,
+// relative to 0 being the start position.  (That is, the position of the
+// selector gear.)
+boolean haveConnection(int rotation, int gear_types[],
+                       int gear_orientations[])
+{
+  // TODO(benkraft)
+  return false;
 }
 
 void sendCastleSuccessMessage() 
@@ -102,11 +115,13 @@ void sendCastleSuccessMessage()
   // 20's -- 2nd puzzle message
   // -0   -- first message from this puzzle
   Serial.println(20);
+  // TODO(benkraft): Should we reset here or something?
 }
 
 void sendCastleErrorMessage()
 {
   Serial.println(21);
+  // TODO(benkraft): Do we need to debounce/fuzz this?
 }
 
 // TODO(benkraft): change return signature to however you want to represent gears
@@ -207,5 +222,6 @@ void reset()
 
   // TODO(bhomberg): close all solenoids (??)
 }
+
 
 
