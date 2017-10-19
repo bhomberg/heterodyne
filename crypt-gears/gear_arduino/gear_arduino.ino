@@ -19,6 +19,8 @@ int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
 boolean correct_positions[7] = {
   false, false, false, false, false, false, false};
 
+int have_won = false;
+
 // this runs once when the program starts
 void setup() 
 {
@@ -76,6 +78,10 @@ void loop()
   {
     reset();
     return;
+  } else if (have_won) {
+    // If we are not resetting, and we have already won, no need to do more
+    // work; just wait for the reset.
+    return;
   }
 
   // TODO(benkraft): figure out whether there is a connection on current
@@ -96,6 +102,7 @@ void loop()
 
   if (winning)
   {
+    have_won = true;
     sendCastleSuccessMessage();
   }
 }
@@ -115,7 +122,6 @@ void sendCastleSuccessMessage()
   // 20's -- 2nd puzzle message
   // -0   -- first message from this puzzle
   Serial.println(20);
-  // TODO(benkraft): Do nothing until we reset.
 }
 
 void sendCastleErrorMessage()
@@ -214,6 +220,7 @@ void reset()
   }
 
   // reset internal state: you have to start over.
+  have_won = false;
   for(int i=0; i<7; i++)
   {
     correct_positions[i] = 0;
