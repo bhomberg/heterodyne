@@ -56,17 +56,45 @@ void loop()
   Serial.print("  ");
   Serial.println(getConnection(gear_connections[0][0], gear_connections[0][1]));
   
-  // TODO(benkraft)
-  // this should probably be a state machine since the loop function loops
-  // every cycle -- check if gears are removed, if so, reset (check by making sure gear orientations/types are the same)
-  // first state -- gear insertion
-  // some kind of check that all gears are good
-  // second state -- move through selector gear connections
-  // verify which ones should be connections
-  // if connection is good, turn on specific light/solenoid for feedback
-  // if all 7 connections were good, send message for success
-  // if you need to send any other messages back to the castle, lemme know
+  // First, get the state of the world.
+  int gear_types[3];
+  int gear_orientations[3];
+  boolean should_reset = false;
+  for (int i=0; i<3; i++)
+  {
+    getOrientationAndTypeForGear(i, &gear_types[i], &gear_orientations[i]);
+    showLodged(i, should_reset);
+    if (gear_types[i] = -1)
+    {
+      should_reset = true;
+    }
+  }
 
+  // If not all gears are lodged, reset -- which may be a no-op -- and exit.
+  if (should_reset)
+  {
+    reset();
+    return;
+  }
+
+  // TODO(benkraft): figure out whether there is a connection on current
+  // selector position
+
+  // check if we won
+  int winning = true;
+  for (int i=0; i<7; i++)
+  {
+    if (!correct_positions[i])
+    {
+      winning = false;
+    }
+  }
+
+  if (winning)
+  {
+    sendCastleSuccessMessage();
+    // TODO(benkraft): Should we reset here or something?
+  }
 }
 
 void sendCastleSuccessMessage() 
@@ -83,7 +111,9 @@ void sendCastleErrorMessage()
 
 // TODO(benkraft): change return signature to however you want to represent gears
 // returns which gear type is inserted + the orientation of the gear
-void getOrientationAndTypeForGear(int gear_num)
+// Return the type and orientation of the gear in the nth position, or -1 for
+// both if no gear is lodged.
+void getOrientationAndTypeForGear(int gear_num, int* type, int* orientation)
 {
   // so the basic idea here is that each gear is attached in 12 places
   // a pair of them will be connected
@@ -148,6 +178,12 @@ void showCorrect(int n)
   digitalWrite(output_lights[n], HIGH);
   
   // TODO(bhomberg): open solenoid??
+}
+
+// turn on light for gear #n lodged, or not
+void showLodged(int n, boolean isLodged)
+{
+  digitalWrite(gear_lodged[n], isLodged ? HIGH : LOW);
 }
 
 // gears have been taken out / selector gear goes back to beginning, reset everything
