@@ -106,7 +106,7 @@ void loop()
 boolean haveConnection(int rotation, int gear_types[],
                        int gear_orientations[])
 {
-  // TODO(benkraft)
+  // TODO(benkraft): Implement.
   return false;
 }
 
@@ -115,21 +115,20 @@ void sendCastleSuccessMessage()
   // 20's -- 2nd puzzle message
   // -0   -- first message from this puzzle
   Serial.println(20);
-  // TODO(benkraft): Should we reset here or something?
+  // TODO(benkraft): Do nothing until we reset.
 }
 
 void sendCastleErrorMessage()
 {
+  // TODO(benkraft): May or may not need to wait a tick to be sure here.
   Serial.println(21);
-  // TODO(benkraft): Do we need to debounce/fuzz this?
 }
 
-// TODO(benkraft): change return signature to however you want to represent gears
-// returns which gear type is inserted + the orientation of the gear
 // Return the type and orientation of the gear in the nth position, or -1 for
 // both if no gear is lodged.
 void getOrientationAndTypeForGear(int gear_num, int* type, int* orientation)
 {
+  // TODO(benkraft): Implement.
   // so the basic idea here is that each gear is attached in 12 places
   // a pair of them will be connected
   // on gear A, they're consecutive
