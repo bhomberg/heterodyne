@@ -1,5 +1,6 @@
 import serial
 from time import sleep
+from time import time
 
 import simpleaudio as sa
 
@@ -8,7 +9,7 @@ import simpleaudio as sa
 # Configuration
 baud_rate = 9600
 arduino_ports = {
-    'engine-room' : '/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
+    'engine-room' : None, #'/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
     'crypt-gears' : None,
     }
 arduinos = dict([(name, None) for name in arduino_ports])
@@ -75,22 +76,32 @@ print('Initializing the Arduinos...')
 initialize_arduinos()
 print('Arduinos initialized')
 
-w = sa.WaveObject.from_wave_file("sound_bites/2-08.wav")
-print("got w")
-p = w.play()
-print("got p")
-p.wait_done()
-print("p done")
+# eventually add an input which triggers this
+s = time()
+print(s)
+max_time = 20*60 # 20 min * 60 s / min
+timekeeping = [False, False, False, False]
+timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
+timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
 
-while(True):
+while(time() - s < max_time):
     sleep(.01)
-    print("slept!")
     for arduino_name in received_messages:
         # Get the latest message from the arduino if one has been received.
         message = get_message(arduino_name)
         if message is not None:
             # Do something with the new message.
             print('\tArduino %s says: %s' % (arduino_name, message))
+    
+    # say time warnings
+    for i in range(4):
+        if timekeeping[i] is False and time() - s > max_time - timeval[i]:
+            timekeeping[i] = True
+            w = sa.WaveObject.from_wave_file(timesound[i])
+            print(timesound[i])
+            p = w.play()
+            p.wait_done()
+        
 
 # Cleanup so the serial ports don't stay busy.
 cleanup_arduinos()
