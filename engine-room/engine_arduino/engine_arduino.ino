@@ -3,7 +3,8 @@
 const int GRIDSIZE = 7;
 const int STRIP_LENGTH = GRIDSIZE * GRIDSIZE;
 
-PololuLedStrip<2> leds;
+const int LED_STRIP_PIN = 2;
+PololuLedStrip<LED_STRIP_PIN> leds;
 rgb_color colors[STRIP_LENGTH];
 
 const int SWITCH_ON = 1;
@@ -21,15 +22,6 @@ const int SWITCH_PINS[] = {
   37, 38, 39, 40, 41, 42, 43,
   44, 45, 46, 47, 48, 49, 50,
 };
-
-// Solution:
-// .-..-0-
-// 2..2.-.
-// .-.....
-// .1...1.
-// .....-.
-// ...1..2
-// .1...-.
 
 const int E = 99; // Empty cell. Everything else is a wall.
 const int PUZZLE[] = {
@@ -208,3 +200,4 @@ void loop()
   updateGridColors();
   leds.write(colors, STRIP_LENGTH);
 }
+
