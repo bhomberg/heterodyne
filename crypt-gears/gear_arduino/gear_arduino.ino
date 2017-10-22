@@ -23,6 +23,22 @@ boolean correct_positions[7] = {
 
 int have_won = false;
 
+// Structure of the gears, represented as pairs that are connected.
+// Orientation is as described in getOrientationAndTypeForGear.
+int gear_0_connections[6][2] = {
+  {2, 5}, {2, 8}, {2, 11}, {5, 8}, {5, 11}, {8, 11}};
+
+int gear_1_connections[12][2] = {
+  {0, 5}, {0, 7}, {5, 7},
+  {1, 6}, {1, 11}, {6, 11},
+  {2, 4}, {2, 9}, {4, 9},
+  {3, 8}, {3, 10}, {8, 10}};
+
+int gear_2_connections[9][2] = {
+  {0, 4}, {0, 8}, {4, 8},
+  {1, 5}, {1, 9}, {5, 9},
+  {2, 6}, {2, 10}, {6, 10}};
+
 // this runs once when the program starts
 void setup() 
 {
@@ -86,8 +102,6 @@ void loop()
     return;
   }
 
-  // TODO(benkraft): figure out whether there is a connection on current
-  // selector position
   int selector_pos = getSelectorGearPosition();
   correct_positions[selector_pos] = haveConnection(
     selector_pos, gear_types, gear_orientations);
@@ -109,13 +123,100 @@ void loop()
   }
 }
 
+// True if positions pos1 and pos2 are connected on gear_num.
+boolean positionsConnected(int gear_num, int pos1, int pos2)
+{
+  // We just do things the simplistic way: do a bunch of casework and search
+  // through the array one at a time.
+  if (gear_num == 0)
+  {
+    for (int i=0; i<6; i++)
+    {
+      if (gear_0_connections[i][0] == pos1
+          && gear_0_connections[i][1] == pos2
+          || gear_0_connections[i][0] == pos2
+          && gear_0_connections[i][1] == pos1)
+      {
+        return true;
+      }
+    }
+  }
+  else if (gear_num == 1)
+  {
+    for (int i=0; i<12; i++)
+    {
+      if (gear_1_connections[i][0] == pos1
+          && gear_1_connections[i][1] == pos2
+          || gear_1_connections[i][0] == pos2
+          && gear_1_connections[i][1] == pos1)
+      {
+        return true;
+      }
+    }
+  }
+  else  // (gear_num == 2)
+  {
+    for (int i=0; i<9; i++)
+    {
+      if (gear_2_connections[i][0] == pos1
+          && gear_2_connections[i][1] == pos2
+          || gear_2_connections[i][0] == pos2
+          && gear_2_connections[i][1] == pos1)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Check if we have a connection.  rotation is the amount we have rotated,
 // relative to 0 being the start position.  (That is, the position of the
-// selector gear.)
+// selector gear.)  Call only if all gears are lodged.
 boolean haveConnection(int rotation, int gear_types[],
                        int gear_orientations[])
 {
-  // TODO(benkraft): Implement.
+  // TODO(benkraft): Make sure these match the actual directions of rotation in
+  // the final mechanism.
+  int rotation_0 = (rotation + gear_orientations[0]) % 12;
+  int rotation_1 = (12 - rotation + gear_orientations[1]) % 12;
+  int rotation_2 = (rotation + gear_orientations[2]) % 12;
+  // These are indexed by the ordering on the left side.
+  boolean first_connections[3] = {false, false, false};
+  boolean second_connections[3] = {false, false, false};
+  for (int i = 11; i<14; i++)
+  {
+    for (int j = 2; j<5; j++)
+    {
+      if (positionsConnected(
+            gear_types[0], (rotation_0 + i) % 12, (rotation_0 + j) % 12))
+      {
+        first_connections[j - 2] = true;
+      }
+    }
+  }
+  for (int i = 8; i<11; i++)
+  {
+    for (int j = 2; j<5; j++)
+    {
+      if (first_connections[(12 - i) % 3] && positionsConnected(
+            gear_types[0], (rotation_0 + i) % 12, (rotation_0 + j) % 12))
+      {
+        second_connections[j - 2] = true;
+      }
+    }
+  }
+  for (int i = 8; i<11; i++)
+  {
+    for (int j = 0; j<2; j++)
+    {
+      if (second_connections[i % 3] && positionsConnected(
+            gear_types[0], (rotation_0 + i) % 12, (rotation_0 + j) % 12))
+      {
+        return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -251,6 +352,3 @@ void reset()
 
   // TODO(bhomberg): close all solenoids (??)
 }
-
-
-
