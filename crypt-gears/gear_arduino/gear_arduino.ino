@@ -1,4 +1,6 @@
 // hard-coded pin numbers for input/output
+// TODO(benkraft): I am assuming for the sake of argument that these start at
+// the top and go clockwise; fix once we know the correct positions.
 int gear_connections[3][12] = {{ 2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13}, 
                                {14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}, 
                                {26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37}};
@@ -132,18 +134,39 @@ void sendCastleErrorMessage()
 
 // Return the type and orientation of the gear in the nth position, or -1 for
 // both if no gear is lodged.
+// Type is 0, 1, 2, in order of the correct solution.
+// Orientation is 0 in the correct solution, 1 if we are one step clockwise
+// from it, and so on.
 void getOrientationAndTypeForGear(int gear_num, int* type, int* orientation)
 {
-  // TODO(benkraft): Implement.
-  // so the basic idea here is that each gear is attached in 12 places
-  // a pair of them will be connected
-  // on gear A, they're consecutive
-  // on gear B, they're 1 away
-  // on gear C, they're 2 away
-  // since they're flip symmetric(yay!) this will uniquely identify each gear + its orientation
-  
-  // example: check whether slots 0 and 1 are connected on gear #0
-  getConnection(gear_connections[0][0], gear_connections[0][1]);
+  *type = -1;
+  *orientation = -1;
+  for (int i=0; i<12; i++) {
+    if (getGearConnection(gear_num, i, (i + 3) % 12))
+    {
+      *type = 0;
+      *orientation = (4 + i) % 12;  // actually equivalent mod 3
+      return;
+    }
+    else if (getGearConnection(gear_num, i, (i + 6) % 12))
+    {
+      *type = 1;
+      *orientation = i % 6;  // actually equivalent mod 3
+      return;
+    }
+    else if (getGearConnection(gear_num, i, (i + 2) % 12))
+    {
+      *type = 2;
+      *orientation = (4 + i) % 12;  // actually equivalent mod 4
+      return;
+    }
+  }
+}
+
+boolean getGearConnection(int gear_num, int slot1, int slot2)
+{
+  return getConnection(gear_connections[gear_num][slot1],
+                       gear_connections[gear_num][slot2]);
 }
 
 // all pins are tied to ground with a 12kOhm resistor
