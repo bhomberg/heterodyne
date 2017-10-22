@@ -115,7 +115,17 @@ void setColor(int row, int col, rgb_color color) {
   colors[index] = color;
 }
 
-void updateGridColors() {
+void setAllBlue() {
+  for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
+    int row = getRow(index);
+    int col = getCol(index);
+    setColor(row, col, getBlue());  // Victory! Make everything blue.
+  }
+}
+
+bool update() {
+  bool anyInvalid = false;
+  bool anyEmpty = false;
   for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
     int row = getRow(index);
     int col = getCol(index);
@@ -123,6 +133,7 @@ void updateGridColors() {
       continue;
     } else if (isSwitchOn(row, col)) {
       if (illuminationCount(row, col) > 1) {
+        anyInvalid = true;
         setColor(row, col, getRed());  // Conflicting lights.
         // TODO(dbieber): Send message
         // Serial.println(10);  // Send "Ahhhhhh!" audio signal.
@@ -133,10 +144,13 @@ void updateGridColors() {
       if (illuminationCount(row, col) > 0) {
         setColor(row, col, getYellow());  // Light you've turned on indirectly.
       } else {
+        anyEmpty = true;
         setColor(row, col, getOff());  // Light that's still off.
       }
     }
   }
+  bool victory = !anyInvalid && !anyEmpty;
+  return victory;
 }
 
 // Color definitions
@@ -182,8 +196,7 @@ rgb_color getOff() {
 }
 
 // Arduino setup() and loop()
-void setup() 
-{
+void setup() {
   Serial.begin(9600); 
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -194,10 +207,12 @@ void setup()
   }
 }
 
-void loop() 
-{
+void loop() {
   delay(20);
-  updateGridColors();
+  bool victory = update();
   leds.write(colors, STRIP_LENGTH);
+  if (victory) {
+    delay(500);
+    setAllBlue();
+  }
 }
-
