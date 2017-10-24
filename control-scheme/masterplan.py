@@ -77,10 +77,6 @@ print('Initializing the Arduinos...')
 initialize_arduinos()
 print('Arduinos initialized')
 
-# eventually add an input which triggers this
-s = time()
-print(s)
-
 # variables for timekeeping
 max_time = 20*60 # 20 min * 60 s / min
 timekeeping = [False, False, False, False]
@@ -88,18 +84,32 @@ timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
 timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
 
 # variables for lights puzzle
-lightsound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
+lightsound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav", "sound_bites/notdyinginthedark.wav"]
 
 # variables for gear puzzle
 gearsound = ["sound_bites/16-25.wav", "sound_bites/goodbyefriends.wav"]
 
 # variables for operator sounds
-operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav", "sound_bites/donttouchnotpuzzle.wav"]
+# todo -- limit switches for doompart2 (moving room locks) and
+# enigmaticmechanism (unlock moving room)
+operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav", "sound_bites/donttouchnotpuzzle.wav", "sound_bites/doompart2.wav", "sound_bites/enigmaticmechanism.wav"]
 
+
+intro = "sound_bites/foolishcreaturesblastdoorsselfdestruct.wav"
+outro = "sound_bites/selfdestructcomplete.wav"
 
 p = None
+done = False
+doom2 = False
+enigma = False
 
-while(time() - s < max_time):
+s = time()
+w = sa.WaveObject.from_wave_file(intro)
+p = w.play()
+p.wait_done()
+p = None
+
+while(time() - s < max_time and !done):
     sleep(.01)
 
     # say puzzle messages if relevant
@@ -126,6 +136,11 @@ while(time() - s < max_time):
             if message == '14':
               w = sa.WaveObject.from_wave_file(lightsound[4])
               p = w.play()
+            if message == '15':
+              w = sa.WaveObject.from_wave_file(lightsound[5])
+              p = w.play()
+              p.wait_done()
+              p = None
             if message == '19':
               if (p != None):
                 p.stop()
@@ -139,12 +154,13 @@ while(time() - s < max_time):
               p.wait_done()
               p = None
             if message == '21':
+              done = True
               w = sa.WaveObject.from_wave_file(gearsound[1])
               p = w.play()
               p.wait_done()
               p = None
 
-            # user input buttons
+            # user input buttons / room buttons
             if message == '0':
               w = sa.WaveObject.from_wave_file(operatorsound[0])
               p = w.play()
@@ -160,6 +176,18 @@ while(time() - s < max_time):
               p = w.play()
               p.wait_done()
               p = None
+            if message == '3' and !doom2:
+              w = sa.WaveObject.from_wave_file(operatorsound[3])
+              p = w.play()
+              p.wait_done()
+              p = None
+              doom2 = True
+            if message == '4' and !enigma:
+              w = sa.WaveObject.from_wave_file(operatorsound[4])
+              p = w.play()
+              p.wait_done()
+              p = None
+              enigma = True
 
     # say time warnings
     for i in range(4):
@@ -171,6 +199,12 @@ while(time() - s < max_time):
             p.wait_done()
             p = None
 
+# if time is out, but has not won
+if !done:
+  w = sa.WaveObject.from_wave_file(outro)
+  p = w.play()
+  p.wait_done()
+  p = None
 
 # Cleanup so the serial ports don't stay busy.
 cleanup_arduinos()
