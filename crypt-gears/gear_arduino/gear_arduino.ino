@@ -11,6 +11,8 @@ int gear_lodged[3] = {45, 46, 47};
 
 int pot = A0;
 
+int photoresistors[3] = {A1, A2, A3};
+
 // TODO(bhomberg): calculate these numbers for real once mechanism is built; this is approx
 int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
 
@@ -121,6 +123,18 @@ void loop()
     have_won = true;
     sendCastleSuccessMessage();
   }
+}
+
+// True if white gear is in front of photo resistor.  False if black paper.
+boolean getPhotoresistor(int i) 
+{
+  // sees white gear
+  if(analogRead(photoresistors[i]) > 850)
+  {
+    return true;
+  }
+  // sees black paper
+  return false;
 }
 
 // True if positions pos1 and pos2 are connected on gear_num.
