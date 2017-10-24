@@ -1,12 +1,9 @@
 import serial
 from time import sleep
 from time import time
-
 import simpleaudio as sa
 
-#sa.functionchecks.LeftRightCheck.run()
-
-# Configuration
+## CONFIGURATION ##
 baud_rate = 9600
 arduino_ports = {
     'engine-room' : None, #'/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
@@ -68,15 +65,14 @@ def process_serial(arduino_name_in):
                     continue
                 received_messages[arduino_name] += r
 
-####################
-# An example usage of the helper methods
-####################
 
-# Initialize.
+## INITIALIZE ##
 print('Initializing the Arduinos...')
 initialize_arduinos()
 print('Arduinos initialized')
 
+
+## VARIABLES ##
 # variables for timekeeping
 max_time = 20*60 # 20 min * 60 s / min
 timekeeping = [False, False, False, False]
@@ -94,30 +90,36 @@ gearsound = ["sound_bites/16-25.wav", "sound_bites/goodbyefriends.wav"]
 # enigmaticmechanism (unlock moving room)
 operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav", "sound_bites/donttouchnotpuzzle.wav", "sound_bites/doompart2.wav", "sound_bites/enigmaticmechanism.wav"]
 
-
+# intro/outro sounds
 intro = "sound_bites/foolishcreaturesblastdoorsselfdestruct.wav"
 outro = "sound_bites/selfdestructcomplete.wav"
 
-p = None
-done = False
-doom2 = False
-enigma = False
 
-s = time()
-w = sa.WaveObject.from_wave_file(intro)
-p = w.play()
-p.wait_done()
-p = None
+# operator loop
+# runs full room lengths -- if you need to start in the middle, the script
+# should be restarted instead
+while(True):
+  start = input("Press any key to start.")
+  done = False
+  doom2 = False
+  enigma = False
 
-while(time() - s < max_time and !done):
+  # play intro
+  s = time()
+  w = sa.WaveObject.from_wave_file(intro)
+  p = w.play()
+  p.wait_done()
+  p = None
+
+  while(time() - s < max_time and !done):
     sleep(.01)
 
     # say puzzle messages if relevant
     for arduino_name in received_messages:
-        # Get the latest message from the arduino if one has been received.
+      # Get the latest message from the arduino if one has been received.
         message = get_message(arduino_name)
         if message is not None:
-            # Do something with the new message.
+          # Do something with the new message.
             print('\tArduino %s says: %s' % (arduino_name, message))
 
             # lights puzzle
@@ -192,19 +194,16 @@ while(time() - s < max_time and !done):
     # say time warnings
     for i in range(4):
         if timekeeping[i] is False and time() - s > max_time - timeval[i]:
-            timekeeping[i] = True
-            w = sa.WaveObject.from_wave_file(timesound[i])
-            print(timesound[i])
-            p = w.play()
-            p.wait_done()
-            p = None
+          timekeeping[i] = True
+          w = sa.WaveObject.from_wave_file(timesound[i])
+          print(timesound[i])
+          p = w.play()
+          p.wait_done()
+          p = None
 
-# if time is out, but has not won
-if !done:
-  w = sa.WaveObject.from_wave_file(outro)
-  p = w.play()
-  p.wait_done()
-  p = None
-
-# Cleanup so the serial ports don't stay busy.
-cleanup_arduinos()
+  # if time is out, but has not won
+  if !done:
+    w = sa.WaveObject.from_wave_file(outro)
+    p = w.play()
+    p.wait_done()
+    p = None
