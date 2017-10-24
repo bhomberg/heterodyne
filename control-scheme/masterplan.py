@@ -93,6 +93,10 @@ lightsound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44
 # variables for gear puzzle
 gearsound = ["sound_bites/16-25.wav", "sound_bites/goodbyefriends.wav"]
 
+# variables for operator sounds
+operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav", "sound_bites/donttouchnotpuzzle.wav"]
+
+
 p = None
 
 while(time() - s < max_time):
@@ -136,6 +140,23 @@ while(time() - s < max_time):
               p = None
             if message == '21':
               w = sa.WaveObject.from_wave_file(gearsound[1])
+              p = w.play()
+              p.wait_done()
+              p = None
+
+            # user input buttons
+            if message == '0':
+              w = sa.WaveObject.from_wave_file(operatorsound[0])
+              p = w.play()
+              p.wait_done()
+              p = None
+            if message == '1':
+              w = sa.WaveObject.from_wave_file(operatorsound[1])
+              p = w.play()
+              p.wait_done()
+              p = None
+            if message == '2':
+              w = sa.WaveObject.from_wave_file(operatorsound[2])
               p = w.play()
               p.wait_done()
               p = None
