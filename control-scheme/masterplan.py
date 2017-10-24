@@ -90,6 +90,9 @@ timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.
 # variables for lights puzzle
 lightsound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
 
+# variables for gear puzzle
+gearsound = ["sound_bites/16-25.wav", "sound_bites/goodbyefriends.wav"]
+
 p = None
 
 while(time() - s < max_time):
@@ -122,6 +125,19 @@ while(time() - s < max_time):
             if message == '19':
               if (p != None):
                 p.stop()
+
+            # gear puzzle
+            if message == '20':
+              print("ERROR!  PUZZLE 4 is BROKEN!  ABORT!")
+              w = sa.WaveObject.from_wave_file(gearsound[0])
+              p = w.play()
+              p.wait_done()
+              p = None
+            if message == '21':
+              w = sa.WaveObject.from_wave_file(gearsound[1])
+              p = w.play()
+              p.wait_done()
+              p = None
 
     # say time warnings
     for i in range(4):
