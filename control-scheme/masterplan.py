@@ -27,7 +27,7 @@ def initialize_arduinos():
         arduinos[name] = serial.Serial(port, baud_rate, timeout=1)
         sleep(3)
         arduinos[name].flushInput()
-        # Initialize the message state.        
+        # Initialize the message state.
         received_messages[name] = ''
         received_complete_messages[name] = False
 
@@ -36,7 +36,8 @@ def cleanup_arduinos():
         if arduino is None:
             continue
         arduino.close()
-        
+
+# TODO(bhomberg): clean this up (& process serial)
 def get_message(arduino_name, inlcude_newline=False):
     process_serial(arduino_name)
     if received_complete_messages[arduino_name]:
@@ -45,7 +46,7 @@ def get_message(arduino_name, inlcude_newline=False):
         received_messages[arduino_name] = ''
         return new_message if inlcude_newline else new_message.strip()
     return None
-    
+
 def process_serial(arduino_name_in):
     for arduino_name, arduino in arduinos.items():
         if arduino is None:
@@ -79,20 +80,49 @@ print('Arduinos initialized')
 # eventually add an input which triggers this
 s = time()
 print(s)
+
+# variables for timekeeping
 max_time = 20*60 # 20 min * 60 s / min
 timekeeping = [False, False, False, False]
 timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
 timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
 
+# variables for lights puzzle
+lightsound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
+
+p = None
+
 while(time() - s < max_time):
     sleep(.01)
+
+    # say puzzle messages if relevant
     for arduino_name in received_messages:
         # Get the latest message from the arduino if one has been received.
         message = get_message(arduino_name)
         if message is not None:
             # Do something with the new message.
             print('\tArduino %s says: %s' % (arduino_name, message))
-    
+
+            # lights puzzle
+            if message == '10':
+              w = sa.WaveObject.from_wave_file(lightsound[0])
+              p = w.play()
+            if message == '11':
+              w = sa.WaveObject.from_wave_file(lightsound[1])
+              p = w.play()
+            if message == '12':
+              w = sa.WaveObject.from_wave_file(lightsound[2])
+              p = w.play()
+            if message == '13':
+              w = sa.WaveObject.from_wave_file(lightsound[3])
+              p = w.play()
+            if message == '14':
+              w = sa.WaveObject.from_wave_file(lightsound[4])
+              p = w.play()
+            if message == '19':
+              if (p != None):
+                p.stop()
+
     # say time warnings
     for i in range(4):
         if timekeeping[i] is False and time() - s > max_time - timeval[i]:
@@ -101,7 +131,8 @@ while(time() - s < max_time):
             print(timesound[i])
             p = w.play()
             p.wait_done()
-        
+            p = None
+
 
 # Cleanup so the serial ports don't stay busy.
 cleanup_arduinos()
