@@ -125,6 +125,7 @@ while(time() - s < max_time):
             if message == '19':
               if (p != None):
                 p.stop()
+                p = None
 
             # gear puzzle
             if message == '20':
