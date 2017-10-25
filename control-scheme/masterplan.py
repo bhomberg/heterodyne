@@ -80,7 +80,7 @@ timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
 timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
 
 # variables for lights puzzle
-lightsound = ["sound_bites/picky.wav", "sound_bites/turnoff.wav", "sound_bites/hurteyes.wav", "sound_bites/doyoueven.wav", "sound_bites/justdont.wav", "sound_bites/notdyinginthedark.wav"]
+lightsound = ["sound_bites/lights/picky.wav", "sound_bites/lights/turnoff.wav", "sound_bites/lights/hurteyes.wav", "sound_bites/lights/doyoueven.wav", "sound_bites/lights/justdont.wav", "sound_bites/notdyinginthedark.wav"]
 
 # variables for gear puzzle
 gearsound = ["sound_bites/sendinghelp.wav", "sound_bites/goodbyefriends.wav"]
@@ -124,7 +124,10 @@ while(True):
       # Get the latest message from the arduino if one has been received.
         message = get_message(arduino_name)
         if message is not None:
-          # Do something with the new message.
+            if p != None:
+                p.stop()
+                p = None
+            # Do something with the new message.
             print('\tArduino %s says: %s' % (arduino_name, message))
 
             # lights puzzle
