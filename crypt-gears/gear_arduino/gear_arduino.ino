@@ -31,10 +31,13 @@ int last_selector_pos = 0;
 // at selector position j.  Only meaningful in state 1, and then only for
 // 0 <= j < the current selector gear position.  When we transition to state 2
 // we use this to populate gear_types and gear_orientations.
+// NOTE: we assume the photoresistor is positioned "up".
+// TODO(benkraft): Confirm this is correct.
 boolean photoresistor_history[3][7];
 
-// The state of the ith gear, if we know it.  Only meaningful in state 2; set
-// from photoresistor_history when we transition there.
+// The state of the ith gear, if we know it.  This is not its current position,
+// but rather the position corresponding to selector gear 0!  Only meaningful
+// in state 2; set from photoresistor_history when we transition there.
 // Type is 0, 1, 2, in order of the correct solution.
 // Orientation is 0 in the correct solution, 1 if we are one step clockwise
 // from it, and so on.
@@ -150,17 +153,41 @@ void loop()
       {
         state = 2;
         // This fills in gear_types and gear_orientations.
-        if (!computeGearPositions())
+        // We check that it passes each time, and that
+        // we see one of each gear type.
+        int failed = false;
+        int types_seen = 0;
+        for (int i=0; i<3; i++)
         {
-          // Or should we say you failed calibration?
+          if (!computeGearPositions(i))
+          {
+            failed = true;
+          }
+          else
+          {
+            types_seen |= 1 << gear_types[i]
+          }
+        }
+
+        if (types_seen != 7)
+        {
+          failed = true;
+        }
+
+
+        if (failed)
+        {
+          // Or should we say you failed calibration, not an error?
           sendCastleErrorMessage();
           state = 0;
           resetLights();
         }
-
-        for (int i=0; i<7; i++)
+        else
         {
-          correct_positions[i] = false;
+          for (int i=0; i<7; i++)
+          {
+            correct_positions[i] = false;
+          }
         }
       }
     }
@@ -216,12 +243,137 @@ void loop()
 
 // LOGIC FOR GEAR STUFF
 
-// Takes in photoresistor_history, which must be filled in entirely, and sets
-// gear_orientations and gear_types.
-// Returns true for success, false if there was an issue.
-boolean computeGearPositions()
+// Reads photoresistor_history[i][], which must be filled in entirely, and sets
+// gear_types[i] and gear_orientations[i].
+// Returns true for success, false if there was an issue (in which case output
+// arrays may not be set).
+boolean computeGearPosition(int i)
 {
-  // TODO(benkraft)
+  // Hold on tight; this is kinda bespoke and messy.
+  int positions_white = 0;
+  for (int j=0; j<7; j++)
+  {
+    positions_white += photoresistor_history[i][j]
+  }
+
+  // If we saw 2 white, they should be in 1, 4 or 2, 5, and that means we have
+  // gear 1, in positions 2 or 1 respectively.
+  if (positions_white == 2)
+  {
+    gear_types[i] = 1;
+    if (photoresistor_history[i][1] && photoresistor_history[i][4])
+    {
+      gear_orientations[i] = 2;
+      return true;
+    }
+    else if (photoresistor_history[i][2] && photoresistor_history[i][5])
+    {
+      gear_orientations[i] = 1;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  // If we saw 3 white, they should be in 0, 3, 6, and that means we have gear
+  // 1, in position 0.
+  else if (positions_white == 3)
+  {
+    if (photoresistor_history[i][0] && photoresistor_history[i][3]
+        && photoresistor_history[i][6])
+    {
+      gear_types[i] = 1;
+      gear_orientations[i] = 0;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  // If we saw 3 black, they should be in 0, 3, 6, and that means we have gear
+  // 0 in position 1.
+  else if (positions_white == 4)
+  {
+    if (!photoresistor_history[i][0] && !photoresistor_history[i][3]
+        && !photoresistor_history[i][6])
+    {
+      gear_types[i] = 0;
+      gear_orientations[i] = 1;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  // If we saw 2 black, we could have them in 1, 4 or 2, 5, in which case we
+  // have gear 0 in positions 0 or 2 respectively; or they could be in 0, 4 or
+  // 1, 5 or 2, 6, in which case we have gear 2 in positions 2, 1, or 0
+  // respectively.
+  else if (positions_white == 5)
+  {
+    if (!photoresistor_history[i][1] && !photoresistor_history[i][4])
+    {
+      gear_types[i] = 0;
+      gear_orientations[i] = 0;
+      return true;
+    }
+    else if (!photoresistor_history[i][2] && !photoresistor_history[i][5])
+    {
+      gear_types[i] = 0;
+      gear_orientations[i] = 2;
+      return true;
+    }
+    else if (!photoresistor_history[i][0] && !photoresistor_history[i][4])
+    {
+      gear_types[i] = 2;
+      gear_orientations[i] = 2;
+      return true;
+    }
+    else if (!photoresistor_history[i][1] && !photoresistor_history[i][5])
+    {
+      gear_types[i] = 2;
+      gear_orientations[i] = 1;
+      return true;
+    }
+    else if (!photoresistor_history[i][2] && !photoresistor_history[i][6])
+    {
+      gear_types[i] = 2;
+      gear_orientations[i] = 0;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  // If we saw 1 black, it should be in 3, and we have gear 2 in position 3.
+  else if (positions_white == 6)
+  {
+    if (!photoresistor_history[i][3])
+    {
+      gear_types[i] = 2;
+      gear_orientations[i] = 3;
+      return true;
+      
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  // Otherwise, something is wrong.
+  else
+  {
+    return false;
+  }
 }
 
 // True if positions pos1 and pos2 are connected on gear_num.
@@ -354,6 +506,7 @@ void resetLights()
   // TODO(bhomberg): close all solenoids (??)
 }
 
+// Tell the user they have won!
 void sendCastleSuccessMessage() 
 {
   // 20's -- 2nd puzzle message
@@ -361,6 +514,8 @@ void sendCastleSuccessMessage()
   Serial.println(20);
 }
 
+// Tell the user something has gone horribly wrong.
+// Caller likely wants to reset internal state here.
 void sendCastleErrorMessage()
 {
   // TODO(benkraft): May or may not need to wait a tick to be sure here.
