@@ -83,7 +83,7 @@ timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.
 lightsound = ["sound_bites/picky.wav", "sound_bites/turnoff.wav", "sound_bites/hurteyes.wav", "sound_bites/doyoueven.wav", "sound_bites/justdont.wav", "sound_bites/notdyinginthedark.wav"]
 
 # variables for gear puzzle
-gearsound = ["sound_bites/ERRORMESSAGETODO.wav", "sound_bites/goodbyefriends.wav"]
+gearsound = ["sound_bites/sendinghelp.wav", "sound_bites/goodbyefriends.wav"]
 
 # variables for operator sounds
 # todo -- limit switches for doompart2 (moving room locks) and
