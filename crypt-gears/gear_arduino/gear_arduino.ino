@@ -32,8 +32,7 @@ int last_selector_pos = 0;
 // at selector position j.  Only meaningful in state 1, and then only for
 // 0 <= j < the current selector gear position.  When we transition to state 2
 // we use this to populate gear_types and gear_orientations.
-// NOTE: we assume the photoresistor is positioned "up".
-// TODO(benkraft): Confirm this is correct.
+// NOTE: The photoresistor is positioned down.
 boolean photoresistor_history[3][7];
 
 // The state of the ith gear, if we know it.  This is not its current position,
@@ -305,7 +304,7 @@ boolean computeGearPosition(int i)
 
   // If we saw 2 black, we could have them in 1, 4 or 2, 5, in which case we
   // have gear 0 in positions 0 or 2 respectively; or they could be in 0, 4 or
-  // 1, 5 or 2, 6, in which case we have gear 2 in positions 2, 1, or 0
+  // 1, 5 or 2, 6, in which case we have gear 2 in positions 1, 0, or 2
   // respectively.
   else if (positions_white == 5)
   {
@@ -324,19 +323,19 @@ boolean computeGearPosition(int i)
     else if (!photoresistor_history[i][0] && !photoresistor_history[i][4])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 1;
       return true;
     }
     else if (!photoresistor_history[i][1] && !photoresistor_history[i][5])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 1;
+      gear_orientations[i] = 0;
       return true;
     }
     else if (!photoresistor_history[i][2] && !photoresistor_history[i][6])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 0;
+      gear_orientations[i] = 3;
       return true;
     }
     else
@@ -345,13 +344,13 @@ boolean computeGearPosition(int i)
     }
   }
 
-  // If we saw 1 black, it should be in 3, and we have gear 2 in position 3.
+  // If we saw 1 black, it should be in 3, and we have gear 2 in position 2.
   else if (positions_white == 6)
   {
     if (!photoresistor_history[i][3])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 3;
+      gear_orientations[i] = 2;
       return true;
       
     }
