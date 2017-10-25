@@ -111,7 +111,7 @@ while(True):
   p.wait_done()
   p = None
 
-  while(time() - s < max_time and !done):
+  while(time() - s < max_time and not done):
     sleep(.01)
 
     # say puzzle messages if relevant
@@ -178,13 +178,13 @@ while(True):
               p = w.play()
               p.wait_done()
               p = None
-            if message == '3' and !doom2:
+            if message == '3' and not doom2:
               w = sa.WaveObject.from_wave_file(operatorsound[3])
               p = w.play()
               p.wait_done()
               p = None
               doom2 = True
-            if message == '4' and !enigma:
+            if message == '4' and not enigma:
               w = sa.WaveObject.from_wave_file(operatorsound[4])
               p = w.play()
               p.wait_done()
@@ -202,7 +202,7 @@ while(True):
           p = None
 
   # if time is out, but has not won
-  if !done:
+  if not done:
     w = sa.WaveObject.from_wave_file(outro)
     p = w.play()
     p.wait_done()
