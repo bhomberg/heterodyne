@@ -9,6 +9,8 @@ int pot = A0;
 int photoresistors[3] = {A1, A2, A3};
 
 // TODO(bhomberg): calculate these numbers for real once mechanism is built; this is approx
+// TODO(benkraft): Reverse these if necesesary to match how I'm considering
+// selector state.
 int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
 
 
@@ -24,7 +26,6 @@ int state = 0;
 // NOTE: selector_pos starts at 0 when we begin to calibrate, goes up to 6 when
 // we finish calibration and start checking positions, and then back to 0 when
 // we perhaps win.
-// TODO(benkraft): Confirm this is correct.
 int last_selector_pos = 0;
 
 // photoresistor_history[i][j] is the state of the photoresistor i when we were
