@@ -77,15 +77,6 @@ void setup()
 {
   Serial.begin(9600); 
   
-  // init all gear connections as inputs
-  for(int i=0; i<3; i++)
-  {
-    for(int j=0; j<12; j++)
-    {
-      pinMode(gear_connections[i][j], INPUT);
-    }
-  }
-  
   // init all output lights as outputs which are off
   for(int i=0; i<7; i++) 
   {
@@ -159,13 +150,13 @@ void loop()
         int types_seen = 0;
         for (int i=0; i<3; i++)
         {
-          if (!computeGearPositions(i))
+          if (!computeGearPosition(i))
           {
             failed = true;
           }
           else
           {
-            types_seen |= 1 << gear_types[i]
+            types_seen |= 1 << gear_types[i];
           }
         }
 
@@ -253,7 +244,7 @@ boolean computeGearPosition(int i)
   int positions_white = 0;
   for (int j=0; j<7; j++)
   {
-    positions_white += photoresistor_history[i][j]
+    positions_white += photoresistor_history[i][j];
   }
 
   // If we saw 2 white, they should be in 1, 4 or 2, 5, and that means we have
