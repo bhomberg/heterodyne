@@ -1,4 +1,5 @@
 #include <PololuLedStrip.h>
+#include <LiquidCrystal.h>
 
 const int GRIDSIZE = 7;
 const int STRIP_LENGTH = GRIDSIZE * GRIDSIZE;
@@ -188,6 +189,7 @@ rgb_color getYellow() {
 
 rgb_color getOff() {
   // TODO(dbieber): How do you actually turn a light off?
+  // bhomberg -- this should work as you expect it to
   rgb_color color;
   color.red = 0;
   color.blue = 0;
@@ -195,9 +197,12 @@ rgb_color getOff() {
   return color;
 }
 
+// TODO(bhomberg): update pin numbers
+LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
+
 // Arduino setup() and loop()
 void setup() {
-  Serial.begin(9600); 
+  Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
 
   // Initial switch pins as INPUTs.
@@ -205,6 +210,9 @@ void setup() {
     int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
     pinMode(pin, INPUT);
   }
+
+  lcd.begin(16, 2);
+  lcd.print("turn the lights on!  but do it right!");
 }
 
 void loop() {
@@ -214,5 +222,7 @@ void loop() {
   if (victory) {
     delay(500);
     setAllBlue();
+    lcd.clear();
+    lcd.print("good work! that was the Z4Z4P i needed!");
   }
 }
