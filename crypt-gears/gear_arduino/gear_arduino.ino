@@ -1,12 +1,7 @@
-// hard-coded pin numbers for input/output
-// TODO(benkraft): I am assuming for the sake of argument that these start at
-// the top and go clockwise; fix once we know the correct positions.
-int gear_connections[3][12] = {{ 2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13}, 
-                               {14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}, 
-                               {26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37}};
-                               
+// PIN NUMBERS
 int output_lights[7] = {38, 39, 40, 41, 42, 43, 44};
 
+// TODO(benkraft): Do we still need these?
 int gear_lodged[3] = {45, 46, 47};
 
 int pot = A0;
@@ -16,14 +11,44 @@ int photoresistors[3] = {A1, A2, A3};
 // TODO(bhomberg): calculate these numbers for real once mechanism is built; this is approx
 int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
 
-// State of the output lights (should match output_lights).
-// Reset when you move any gears.  This is the only state we need;
-// everything about the positions of gears we determine at need.
-// When each of these are set to 1, you win!
-boolean correct_positions[7] = {
-  false, false, false, false, false, false, false};
 
-int have_won = false;
+// STATE OF THE WORLD
+
+// 0: we have not started to calibrate.
+// 1: we are calibrating.
+// 2: we are unlocking.
+// 3: we have won.
+int state = 0;
+
+// The last known state of the selector.
+// NOTE: selector_pos starts at 0 when we begin to calibrate, goes up to 6 when
+// we finish calibration and start checking positions, and then back to 0 when
+// we perhaps win.
+// TODO(benkraft): Confirm this is correct.
+int last_selector_pos = 0;
+
+// photoresistor_history[i][j] is the state of the photoresistor i when we were
+// at selector position j.  Only meaningful in state 1, and then only for
+// 0 <= j < the current selector gear position.  When we transition to state 2
+// we use this to populate gear_types and gear_orientations.
+boolean photoresistor_history[3][7];
+
+// The state of the ith gear, if we know it.  Only meaningful in state 2; set
+// from photoresistor_history when we transition there.
+// Type is 0, 1, 2, in order of the correct solution.
+// Orientation is 0 in the correct solution, 1 if we are one step clockwise
+// from it, and so on.
+int gear_types[3];
+int gear_orientations[3];
+
+// State of the output lights (should match output_lights).
+// Only meaningful if we are in state 2.  If while in state 2,
+// these are all true, we move to state 3 and win.
+// Note they get filled in in reverse order (see note by selector pos).
+boolean correct_positions[7];
+
+
+// CONSTANTS DEFINING THE PUZZLE
 
 // Structure of the gears, represented as pairs that are connected.
 // Orientation is as described in getOrientationAndTypeForGear.
@@ -40,6 +65,9 @@ int gear_2_connections[9][2] = {
   {0, 4}, {0, 8}, {4, 8},
   {1, 5}, {1, 9}, {5, 9},
   {2, 6}, {2, 10}, {6, 10}};
+
+
+// MAIN TOPLEVEL STUFF
 
 // this runs once when the program starts
 void setup() 
@@ -73,68 +101,127 @@ void setup()
 // this is run continuously after setup has completed
 void loop() 
 {
-  delay(50);
-  // print out position of the pot
-  Serial.print(getSelectorGearPosition());
-  Serial.print("  ");
-  Serial.println(getConnection(gear_connections[0][0], gear_connections[0][1]));
-  
-  // First, get the state of the world.
-  int gear_types[3];
-  int gear_orientations[3];
-  boolean should_reset = false;
-  for (int i=0; i<3; i++)
-  {
-    getOrientationAndTypeForGear(i, &gear_types[i], &gear_orientations[i]);
-    showLodged(i, should_reset);
-    if (gear_types[i] = -1)
-    {
-      should_reset = true;
-    }
-  }
-
-  // If not all gears are lodged, reset -- which may be a no-op -- and exit.
-  if (should_reset)
-  {
-    reset();
-    return;
-  } else if (have_won) {
-    // If we are not resetting, and we have already won, no need to do more
-    // work; just wait for the reset.
-    return;
-  }
-
   int selector_pos = getSelectorGearPosition();
-  correct_positions[selector_pos] = haveConnection(
-    selector_pos, gear_types, gear_orientations);
-
-  // check if we won
-  int winning = true;
-  for (int i=0; i<7; i++)
+  if (selector_pos == -1)
   {
-    if (!correct_positions[i])
+    sendCastleErrorMessage();
+    return;
+  }
+
+  // LE GRAND STATE MACHINE
+  // NOTE: with some exceptions the state machine falls through: if we advance
+  // position we immediately do what we would have done there.
+  if (state == 0)
+  {
+    // TODO(benkraft): Should we only be starting here when the red button is
+    // pressed?
+    if (selector_pos == 0)
     {
-      winning = false;
+      // We have started calibrating!
+      state = 1;
     }
   }
 
-  if (winning)
+  if (state == 1)
   {
-    have_won = true;
-    sendCastleSuccessMessage();
+    if (selector_pos < last_selector_pos
+        || selector_pos > last_selector_pos + 1)
+    {
+      // They have gone backwards or too fast.
+      // TODO(benkraft): We may wish to debounce here, or say it's ok for them
+      // to go back and forth as long as they get there eventually (and we only
+      // consider the position they last got to in order).
+      state = 0;
+      resetLights();
+    }
+    else if (selector_pos == last_selector_pos + 1)
+    {
+      // Fill in new photoresistor states.
+      // TODO(benkraft): We almost certainly want to wait until we're closer to
+      // the middle of this state to check; probably this will be solved at the
+      // same time as debouncing.
+      for (int i=0; i<3; i++)
+      {
+        photoresistor_history[i][selector_pos] = getPhotoresistor(i);
+      }
+
+      // If we are at the end, move on to state 2.
+      if (selector_pos == 6)
+      {
+        state = 2;
+        // This fills in gear_types and gear_orientations.
+        if (!computeGearPositions())
+        {
+          // Or should we say you failed calibration?
+          sendCastleErrorMessage();
+          state = 0;
+          resetLights();
+        }
+
+        for (int i=0; i<7; i++)
+        {
+          correct_positions[i] = false;
+        }
+      }
+    }
   }
+
+  if (state == 2)
+  {
+    if (selector_pos > last_selector_pos
+        || selector_pos < last_selector_pos - 1)
+    {
+      // They have gone backwards or too fast.
+      // TODO(benkraft): As above, we may wish to debounce.
+      state = 0;
+      resetLights();
+    }
+    else if (selector_pos == last_selector_pos - 1)
+    {
+      // Fill in new connection states.
+      correct_positions[selector_pos] = haveConnection(selector_pos);
+      if (correct_positions[selector_pos])
+      {
+        showCorrect(selector_pos);
+      }
+
+      if (selector_pos == 0)
+      {
+        // If we are back to the beginning, and have won, yay!
+        boolean winning = true;
+        for (int i=0; i<7; i++)
+        {
+          if (!correct_positions[i])
+          {
+            winning = false;
+            break;
+          }
+        }
+
+        if (winning)
+        {
+          state = 3;
+          sendCastleSuccessMessage();
+        }
+      }
+    }
+  }
+
+  // TODO(benkraft): How do we exit state 3?  When the button is pressed?
+
+  last_selector_pos = selector_pos;
+  delay(50);
 }
 
-// True if white gear is in front of photo resistor.  False if black paper.
-boolean getPhotoresistor(int i) 
+
+// LOGIC FOR GEAR STUFF
+
+// Takes in photoresistor_history, which must be filled in entirely, and sets
+// gear_orientations and gear_types.
+// Returns true for success, false if there was an issue.
+boolean computeGearPositions()
 {
-  // sees white gear
-  if(analogRead(photoresistors[i]) > 850)
-  {
-    return true;
-  }
-  // sees black paper
-  return false;
+  // TODO(benkraft)
 }
 
 // True if positions pos1 and pos2 are connected on gear_num.
@@ -187,8 +274,7 @@ boolean positionsConnected(int gear_num, int pos1, int pos2)
 // Check if we have a connection.  rotation is the amount we have rotated,
 // relative to 0 being the start position.  (That is, the position of the
 // selector gear.)  Call only if all gears are lodged.
-boolean haveConnection(int rotation, int gear_types[],
-                       int gear_orientations[])
+boolean haveConnection(int rotation)
 {
   // TODO(benkraft): Make sure these match the actual directions of rotation in
   // the final mechanism.
@@ -234,6 +320,40 @@ boolean haveConnection(int rotation, int gear_types[],
   return false;
 }
 
+
+// COMMUNICATION
+
+// turn on light / open solenoid for selector connection #n
+void showCorrect(int n)
+{
+  // turn on light
+  digitalWrite(output_lights[n], HIGH);
+  
+  // TODO(bhomberg): open solenoid??
+}
+
+// turn on light for gear #n lodged, or not
+void showLodged(int n, boolean isLodged)
+{
+  digitalWrite(gear_lodged[n], isLodged ? HIGH : LOW);
+}
+
+// Reset all the lights.  (Caller should reset internal state.)
+void resetLights()
+{
+  // turn off all lights
+  for(int i=0; i<7; i++)
+  {
+    digitalWrite(output_lights[i], LOW);
+  }
+  for(int i=0; i<3; i++) 
+  {
+    digitalWrite(gear_lodged[i], LOW);
+  }
+
+  // TODO(bhomberg): close all solenoids (??)
+}
+
 void sendCastleSuccessMessage() 
 {
   // 20's -- 2nd puzzle message
@@ -244,67 +364,37 @@ void sendCastleSuccessMessage()
 void sendCastleErrorMessage()
 {
   // TODO(benkraft): May or may not need to wait a tick to be sure here.
+  // TODO(benkraft): May want to log debugging info here.
   Serial.println(21);
 }
 
-// Return the type and orientation of the gear in the nth position, or -1 for
-// both if no gear is lodged.
-// Type is 0, 1, 2, in order of the correct solution.
-// Orientation is 0 in the correct solution, 1 if we are one step clockwise
-// from it, and so on.
-void getOrientationAndTypeForGear(int gear_num, int* type, int* orientation)
+void printState()
 {
-  *type = -1;
-  *orientation = -1;
-  for (int i=0; i<12; i++) {
-    if (getGearConnection(gear_num, i, (i + 3) % 12))
-    {
-      *type = 0;
-      *orientation = (4 + i) % 12;  // actually equivalent mod 3
-      return;
-    }
-    else if (getGearConnection(gear_num, i, (i + 6) % 12))
-    {
-      *type = 1;
-      *orientation = i % 6;  // actually equivalent mod 3
-      return;
-    }
-    else if (getGearConnection(gear_num, i, (i + 2) % 12))
-    {
-      *type = 2;
-      *orientation = (4 + i) % 12;  // actually equivalent mod 4
-      return;
-    }
+  // TODO(benkraft): internal state too?
+  // print out position of the pot
+  Serial.print(getSelectorGearPosition());
+  // print out the three photoresistors.
+  for (int i=0; i<3; i++)
+  {
+    Serial.print(" ");
+    Serial.print(getPhotoresistor(i));
   }
+  Serial.println("");
 }
 
-boolean getGearConnection(int gear_num, int slot1, int slot2)
-{
-  return getConnection(gear_connections[gear_num][slot1],
-                       gear_connections[gear_num][slot2]);
-}
 
-// all pins are tied to ground with a 12kOhm resistor
-// we drive one of the pins high (changing its impedance mode) and read the other pin
-// if high, we're connected, if low, not connected
-// pins on separate gears will never be connected
-// returns true if the pins are connected
-// side effects: briefly turns pin1 high, but returns it to input mode after
-boolean getConnection(int pin1, int pin2) 
+// INPUT READING
+
+// True if white gear is in front of photo resistor.  False if black paper.
+boolean getPhotoresistor(int i) 
 {
-  pinMode(pin1, OUTPUT);
-  digitalWrite(pin1, HIGH);
-  
-  boolean rtrn = false;
-  if (digitalRead(pin2)) {
-    rtrn = true;
+  // sees white gear
+  if(analogRead(photoresistors[i]) > 850)
+  {
+    return true;
   }
-  delay(2000);
-  
-  digitalWrite(pin1, LOW);  
-  pinMode(pin1, INPUT);
-  
-  return rtrn;
+  // sees black paper
+  return false;
 }
 
 // based on the pot value, we know which of the 7 positions the selector gear is in
@@ -325,44 +415,5 @@ int getSelectorGearPosition()
   
   // else: val is below pot_locs[0] or greater than pot_locs[7]
   // puzzle is borken
-  sendCastleErrorMessage();
   return -1;
-}
-
-// turn on light / open solenoid for selector connection #n
-void showCorrect(int n)
-{
-  // turn on light
-  digitalWrite(output_lights[n], HIGH);
-  
-  // TODO(bhomberg): open solenoid??
-}
-
-// turn on light for gear #n lodged, or not
-void showLodged(int n, boolean isLodged)
-{
-  digitalWrite(gear_lodged[n], isLodged ? HIGH : LOW);
-}
-
-// gears have been taken out / selector gear goes back to beginning, reset everything
-void reset()
-{
-  // turn off all lights
-  for(int i=0; i<7; i++)
-  {
-    digitalWrite(output_lights[i], LOW);
-  }
-  for(int i=0; i<3; i++) 
-  {
-    digitalWrite(gear_lodged[i], LOW);
-  }
-
-  // reset internal state: you have to start over.
-  have_won = false;
-  for(int i=0; i<7; i++)
-  {
-    correct_positions[i] = 0;
-  }
-
-  // TODO(bhomberg): close all solenoids (??)
 }
