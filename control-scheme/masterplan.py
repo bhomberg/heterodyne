@@ -6,7 +6,7 @@ import simpleaudio as sa
 ## CONFIGURATION ##
 baud_rate = 9600
 arduino_ports = {
-    'engine-room' : None, #'/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
+    'engine-room' : '/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
     'crypt-gears' : None,
     }
 arduinos = dict([(name, None) for name in arduino_ports])
@@ -111,8 +111,13 @@ while(True):
   p.wait_done()
   p = None
 
+  c = 0
+
   while(time() - s < max_time and not done):
+    if c % 100 == 0:
+        print("loop")
     sleep(.01)
+    c+=1
 
     # say puzzle messages if relevant
     for arduino_name in received_messages:
