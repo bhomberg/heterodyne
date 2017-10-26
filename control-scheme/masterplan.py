@@ -171,29 +171,29 @@ while(True):
               p = None
 
             # user input buttons / room buttons
-            if message == '0':
-              w = sa.WaveObject.from_wave_file(operatorsound[0])
-              p = w.play()
-              p.wait_done()
-              p = None
-            if message == '1':
-              w = sa.WaveObject.from_wave_file(operatorsound[1])
-              p = w.play()
-              p.wait_done()
-              p = None
             if message == '2':
               w = sa.WaveObject.from_wave_file(operatorsound[2])
               p = w.play()
               p.wait_done()
               p = None
-            if message == '3' and not doom2:
+            if message == '3':
               w = sa.WaveObject.from_wave_file(operatorsound[3])
               p = w.play()
               p.wait_done()
               p = None
-              doom2 = True
-            if message == '4' and not enigma:
+            if message == '4':
               w = sa.WaveObject.from_wave_file(operatorsound[4])
+              p = w.play()
+              p.wait_done()
+              p = None
+            if message == '5' and not doom2:
+              w = sa.WaveObject.from_wave_file(operatorsound[5])
+              p = w.play()
+              p.wait_done()
+              p = None
+              doom2 = True
+            if message == '6' and not enigma:
+              w = sa.WaveObject.from_wave_file(operatorsound[6])
               p = w.play()
               p.wait_done()
               p = None
