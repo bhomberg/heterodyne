@@ -6,8 +6,9 @@ import simpleaudio as sa
 ## CONFIGURATION ##
 baud_rate = 9600
 arduino_ports = {
-    'engine-room' : '/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
+    'engine-room' : None, #'/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
     'crypt-gears' : None,
+    'operator' : '/dev/ttyUSB0',
     }
 arduinos = dict([(name, None) for name in arduino_ports])
 received_messages = dict([(name, '') for name in arduino_ports])
@@ -172,28 +173,28 @@ while(True):
 
             # user input buttons / room buttons
             if message == '2':
-              w = sa.WaveObject.from_wave_file(operatorsound[2])
+              w = sa.WaveObject.from_wave_file(operatorsound[0])
               p = w.play()
               p.wait_done()
               p = None
             if message == '3':
-              w = sa.WaveObject.from_wave_file(operatorsound[3])
+              w = sa.WaveObject.from_wave_file(operatorsound[1])
               p = w.play()
               p.wait_done()
               p = None
             if message == '4':
-              w = sa.WaveObject.from_wave_file(operatorsound[4])
+              w = sa.WaveObject.from_wave_file(operatorsound[2])
               p = w.play()
               p.wait_done()
               p = None
             if message == '5' and not doom2:
-              w = sa.WaveObject.from_wave_file(operatorsound[5])
+              w = sa.WaveObject.from_wave_file(operatorsound[3])
               p = w.play()
               p.wait_done()
               p = None
               doom2 = True
             if message == '6' and not enigma:
-              w = sa.WaveObject.from_wave_file(operatorsound[6])
+              w = sa.WaveObject.from_wave_file(operatorsound[4])
               p = w.play()
               p.wait_done()
               p = None
