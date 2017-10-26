@@ -9,10 +9,14 @@ int pot = A0;
 
 int photoresistors[3] = {A1, A2, A3};
 
+// CALIBRATION
+
 // if the potentiometer is between pot_locs[2*i] and pod_locs[2*i+1], then we 
 // say we are in position i.  otherwise, we are between positions.
 int pot_locs[14] = {1024, 885, 825, 690, 640, 450, 390, 280, 190, 70, 50, 24, 12, 0};
 
+// above this = white; below = black (unlodged is undefined)
+int photoresistor_thresholds[3] = {28, 6, 15};
 
 // STATE OF THE WORLD
 
@@ -51,7 +55,7 @@ int gear_orientations[3];
 boolean correct_positions[7];
 
 // -1 if not blinking, 0..19 when blinking (0..9 = on, 10..19 = off)
-boolean calibration_state = -1;
+int calibration_state = -1;
 
 // 0..9 or -1 to disable debug; only show state on 0
 int debug_state = 0;
@@ -100,7 +104,7 @@ void loop()
   }
   if (debug_state >= 0)
   {
-    debug_state = (debug_state + 1) % 10;
+    debug_state = (debug_state + 1) % 20;
   }
   
   int selector_pos = getSelectorGearPosition();
@@ -127,6 +131,7 @@ void loop()
     {
       // We have started calibrating!
       state = 1;
+      last_selector_pos = -1; // state 1 case will fix
     }
   }
 
@@ -165,13 +170,45 @@ void loop()
         int types_seen = 0;
         for (int i=0; i<3; i++)
         {
+          if (debug_state > 0)
+          {
+            Serial.print("GEAR ");
+            Serial.print(i);
+          }
           if (!computeGearPosition(i))
           {
             failed = true;
+            if (debug_state > 0)
+            {
+              Serial.println(" none");
+            }
           }
           else
           {
             types_seen |= 1 << gear_types[i];
+            if (debug_state > 0)
+            {
+              Serial.print(" type ");
+              Serial.print(gear_types[i]);
+              Serial.print(", orientation ");
+              Serial.println(gear_orientations[i]);
+            }
+          }
+        }
+
+        if (debug_state > 0)
+        {
+          for (int i=0; i<3; i++)
+          {
+            Serial.print("history ");
+            Serial.print(i);
+            Serial.print(":");
+            for (int j=0; j<=last_selector_pos; j++)
+            {
+              Serial.print(" ");
+              Serial.print(photoresistor_history[i][j]);
+            }
+            Serial.println("");
           }
         }
 
@@ -244,6 +281,7 @@ void loop()
   if (state == 3 && buttonPressed())
   {
     state = 0;
+    resetLights();
   }
 
   // TODO(benkraft): How do we exit state 3?  When the button is pressed?
@@ -274,12 +312,12 @@ boolean computeGearPosition(int i)
     gear_types[i] = 1;
     if (photoresistor_history[i][1] && photoresistor_history[i][4])
     {
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 1;
       return true;
     }
     else if (photoresistor_history[i][2] && photoresistor_history[i][5])
     {
-      gear_orientations[i] = 1;
+      gear_orientations[i] = 2;
       return true;
     }
     else
@@ -331,31 +369,31 @@ boolean computeGearPosition(int i)
     if (!photoresistor_history[i][1] && !photoresistor_history[i][4])
     {
       gear_types[i] = 0;
-      gear_orientations[i] = 0;
+      gear_orientations[i] = 2;
       return true;
     }
     else if (!photoresistor_history[i][2] && !photoresistor_history[i][5])
     {
       gear_types[i] = 0;
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 0;
       return true;
     }
     else if (!photoresistor_history[i][0] && !photoresistor_history[i][4])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 1;
+      gear_orientations[i] = 2;
       return true;
     }
     else if (!photoresistor_history[i][1] && !photoresistor_history[i][5])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 0;
+      gear_orientations[i] = 3;
       return true;
     }
     else if (!photoresistor_history[i][2] && !photoresistor_history[i][6])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 3;
+      gear_orientations[i] = 0;
       return true;
     }
     else
@@ -370,7 +408,7 @@ boolean computeGearPosition(int i)
     if (!photoresistor_history[i][3])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 1;
       return true;
       
     }
@@ -513,11 +551,11 @@ void setCalibration(boolean on)
   calibration_state = -1;
   if (on)
   {
-    digitalWrite(calibration_light, LOW);
+    digitalWrite(calibration_light, HIGH);
   }
   else
   {
-    digitalWrite(calibration_light, HIGH);
+    digitalWrite(calibration_light, LOW);
   }
 }
 
@@ -526,11 +564,11 @@ void stepCalibration()
   calibration_state = (calibration_state + 1) % 20;
   if (calibration_state < 10)
   {
-    digitalWrite(calibration_light, LOW);
+    digitalWrite(calibration_light, HIGH);
   }
   else
   {
-    digitalWrite(calibration_light, HIGH);
+    digitalWrite(calibration_light, LOW);
   }
 }
 
@@ -563,6 +601,9 @@ void printState()
   {
     Serial.print(" ");
     Serial.print(getPhotoresistor(i));
+    Serial.print(" (");
+    Serial.print(analogRead(photoresistors[i]));
+    Serial.print(")");
   }
   Serial.println("");
   
@@ -608,10 +649,11 @@ void printState()
 // INPUT READING
 
 // True if white gear is in front of photo resistor.  False if black paper.
+// Undefined if gear not lodged.
 boolean getPhotoresistor(int i) 
 {
   // sees white gear
-  if(analogRead(photoresistors[i]) > 850)
+  if(analogRead(photoresistors[i]) > photoresistor_thresholds[i])
   {
     return true;
   }
