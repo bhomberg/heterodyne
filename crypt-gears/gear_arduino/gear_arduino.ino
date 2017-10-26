@@ -1,17 +1,15 @@
 // PIN NUMBERS
 int output_lights[7] = {38, 39, 40, 41, 42, 43, 44};
 
-// TODO(benkraft): Do we still need these?
-int gear_lodged[3] = {45, 46, 47};
+int red_button = 30;
 
 int pot = A0;
 
 int photoresistors[3] = {A1, A2, A3};
 
-// TODO(bhomberg): calculate these numbers for real once mechanism is built; this is approx
-// TODO(benkraft): Reverse these if necesesary to match how I'm considering
-// selector state.
-int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
+// if the potentiometer is between pot_locs[2*i] and pod_locs[2*i+1], then we 
+// say we are in position i.  otherwise, we are between positions.
+int pot_locs[14] = {1024, 885, 825, 690, 640, 450, 390, 280, 190, 70, 50, 24, 12, 0};
 
 
 // STATE OF THE WORLD
@@ -83,22 +81,23 @@ void setup()
     pinMode(output_lights[i], OUTPUT);
     digitalWrite(output_lights[i], LOW);
   }
-  
-  // init all outputs for gear being lodged correctly
-  for(int i=0; i<3; i++)
-  {
-    pinMode(gear_lodged[i], OUTPUT);
-    digitalWrite(gear_lodged[i], LOW);
-  }
 }
 
 // this is run continuously after setup has completed
 void loop() 
 {
+  delay(50);
   int selector_pos = getSelectorGearPosition();
-  if (selector_pos == -1)
+  Serial.println(selector_pos);
+  return;
+  if (selector_pos == -2)
   {
     sendCastleErrorMessage();
+    return;
+  }
+  else if (selector_pos == -1)
+  {
+    // we haven't made it to a new position yet, do nothing.
     return;
   }
 
@@ -475,12 +474,6 @@ void showCorrect(int n)
   // TODO(bhomberg): open solenoid??
 }
 
-// turn on light for gear #n lodged, or not
-void showLodged(int n, boolean isLodged)
-{
-  digitalWrite(gear_lodged[n], isLodged ? HIGH : LOW);
-}
-
 // Reset all the lights.  (Caller should reset internal state.)
 void resetLights()
 {
@@ -488,10 +481,6 @@ void resetLights()
   for(int i=0; i<7; i++)
   {
     digitalWrite(output_lights[i], LOW);
-  }
-  for(int i=0; i<3; i++) 
-  {
-    digitalWrite(gear_lodged[i], LOW);
   }
 
   // TODO(bhomberg): close all solenoids (??)
@@ -544,22 +533,30 @@ boolean getPhotoresistor(int i)
 }
 
 // based on the pot value, we know which of the 7 positions the selector gear is in
-// returns an int 0-6 inclusive or -1 in error cases
-// if the pot value is out of range, throws an error and informs the castle operators that the puzzle is broken
-// the position of the selector gear uniquely determines the position of all of the other gears
+// returns an int 0-6 inclusive, -1 if we are in between positions, and -2 if we
+// have an unreasonable value
 int getSelectorGearPosition() 
 {
   int val = analogRead(pot);
+  Serial.print(val);
+  Serial.print(" ");
+
+  if (val > pot_locs[0])
+  {
+    return -2;
+  }
   
   for (int i=0; i<7; i++)
   {
-    if (val > pot_locs[i] && val < pot_locs[i+1])
+    if (val > pot_locs[2*i])
+    {
+      return -1;
+    }
+    else if (val <= pot_locs[2*i] && val >= pot_locs[2*i+1])
     {
       return i;
     }
   }
-  
-  // else: val is below pot_locs[0] or greater than pot_locs[7]
-  // puzzle is borken
-  return -1;
+
+  return -2;
 }
