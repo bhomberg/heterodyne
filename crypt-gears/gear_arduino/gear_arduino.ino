@@ -13,7 +13,14 @@ int photoresistors[3] = {A1, A2, A3};
 
 // if the potentiometer is between pot_locs[2*i] and pod_locs[2*i+1], then we 
 // say we are in position i.  otherwise, we are between positions.
-int pot_locs[14] = {1024, 885, 825, 690, 640, 450, 390, 280, 190, 70, 50, 24, 12, 0};
+// TODO(benkraft): Consider narrowing these.
+int pot_locs[14] = {1024, 885,
+                    825, 690,
+                    640, 450,
+                    390, 280,
+                    190, 70,
+                    50, 24,
+                    12, 0};
 
 // above this = white; below = black (unlodged is undefined)
 // TODO(benkraft): Recompute after we move them.
@@ -60,10 +67,11 @@ int gear_orientations[3];
 // Note they get filled in in reverse order (see note by selector pos).
 boolean correct_positions[7];
 
-// -1 if not blinking, 0..19 when blinking (0..9 = on, 10..19 = off)
-int calibration_state = -1;
-
-// 0..9 or -1 to disable debug; only show state on 0
+// State of various timers.  For the blinkers, -1 is not blinking,
+// [0, BLINK_SPEED) is on, [BLINK_SPEED, 2*BLINK_SPEED) is off.
+// For debug, we just log on 0.
+int calibration_blink_state = -1;
+int winning_blink_state = -1;
 int debug_state = 0;
 
 // CONSTANTS DEFINING THE PUZZLE
@@ -84,6 +92,14 @@ int gear_2_connections[9][2] = {
   {1, 5}, {1, 9}, {5, 9},
   {2, 6}, {2, 10}, {6, 10}};
 
+// SETTINGS
+
+// How long in ms we wait between loops
+int FRAME_SPEED = 50; // 20 fps
+// How many frames to wait before toggling blinking lights
+int BLINK_SPEED = 10; // 0.5s
+// How many frames to wait before logging debug data, or 0 for never
+int DEBUG_FREQ = 20; // 1s
 
 // MAIN TOPLEVEL STUFF
 
@@ -103,15 +119,7 @@ void setup()
 // this is run continuously after setup has completed
 void loop() 
 {
-  delay(50);
-  if (debug_state == 0)
-  {
-    printState();
-  }
-  if (debug_state >= 0)
-  {
-    debug_state = (debug_state + 1) % 20;
-  }
+  delay(FRAME_SPEED);
   
   int selector_pos = getSelectorGearPosition();
   if (selector_pos == -2)
@@ -131,8 +139,6 @@ void loop()
   if (state == 0)
   {
     setCalibration(false);
-    // TODO(benkraft): Should we only be starting here when the red button is
-    // pressed?
     if (selector_pos == 0 && buttonPressed())
     {
       // We have started calibrating!
@@ -151,7 +157,7 @@ void loop()
 
   if (state == 1)
   {
-    stepCalibration();
+    blinkCalibration();
     if (selector_pos < last_selector_pos
         || selector_pos > last_selector_pos + 1)
     {
@@ -220,7 +226,6 @@ void loop()
         || selector_pos < last_selector_pos - 1)
     {
       // They have gone backwards or too fast.
-      // TODO(benkraft): As above, we may wish to debounce.
       state = 0;
       resetLights();
     }
@@ -249,16 +254,25 @@ void loop()
         if (winning)
         {
           state = 3;
+          winning_blink_state = 0;
           sendCastleSuccessMessage();
         }
       }
     }
   }
 
-  if (state == 3 && buttonPressed())
+  if (state == 3)
   {
-    state = 0;
-    resetLights();
+    if (buttonPressed())
+    {
+      state = 0;
+      winning_blink_state = -1;
+      resetLights();
+    }
+    else
+    {
+      blinkWinningLights();
+    }
   }
 
   last_selector_pos = selector_pos;
@@ -280,6 +294,9 @@ boolean computeGearPosition(int i)
   int positions_white = 0;
   for (int j=0; j<7; j++)
   {
+    // TODO(benkraft): If ambient light variation is an issue, we could compute
+    // the largest and smallest values we saw, and if they are far enough
+    // apart, set a dynamic threshold halfway between.
     photoresistor_history[j] = (
       photoresistor_totals[i][j] / photoresistor_counts[i][j]
       < photoresistor_thresholds[i]);
@@ -459,8 +476,6 @@ boolean positionsConnected(int gear_num, int pos1, int pos2)
 // selector gear.)  Call only if all gears are lodged.
 boolean haveConnection(int rotation)
 {
-  // TODO(benkraft): Make sure these match the actual directions of rotation in
-  // the final mechanism.
   int rotation_0 = (rotation + gear_orientations[0]) % 12;
   int rotation_1 = (12 - rotation + gear_orientations[1]) % 12;
   int rotation_2 = (rotation + gear_orientations[2]) % 12;
@@ -530,7 +545,7 @@ void resetLights()
 
 void setCalibration(boolean on)
 {
-  calibration_state = -1;
+  calibration_blink_state = -1;
   if (on)
   {
     digitalWrite(calibration_light, HIGH);
@@ -541,16 +556,34 @@ void setCalibration(boolean on)
   }
 }
 
-void stepCalibration()
+void blinkCalibration()
 {
-  calibration_state = (calibration_state + 1) % 20;
-  if (calibration_state < 10)
+  calibration_blink_state = (calibration_blink_state + 1) % (2 * BLINK_SPEED);
+  if (calibration_blink_state < BLINK_SPEED)
   {
     digitalWrite(calibration_light, HIGH);
   }
   else
   {
     digitalWrite(calibration_light, LOW);
+  }
+}
+
+void blinkWinningLights()
+{
+  winning_blink_state = (winning_blink_state + 1) % (2 * BLINK_SPEED);
+  int val;
+  if (winning_blink_state < BLINK_SPEED)
+  {
+    val = HIGH;
+  }
+  else
+  {
+    val = LOW;
+  }
+  for (int i=0; i<7; i++)
+  {
+    digitalWrite(output_lights[i], val);
   }
 }
 
@@ -566,56 +599,64 @@ void sendCastleSuccessMessage()
 // Caller likely wants to reset internal state here.
 void sendCastleErrorMessage()
 {
-  // TODO(benkraft): May or may not need to wait a tick to be sure here.
-  // TODO(benkraft): May want to log debugging info here.
   Serial.println(21);
 }
 
 void printState()
 {
-  // print out position of the pot
-  Serial.print("pot: ");
-  Serial.println(getSelectorGearPosition());
-  // print out the three photoresistors.
-  Serial.print("photoresistors:");
-  for (int i=0; i<3; i++)
+  if (DEBUG_FREQ <= 0)
   {
-    Serial.print(" ");
-    Serial.print(getRawPhotoresistor(i));
-    Serial.print(" (");
-    Serial.print(analogRead(photoresistors[i]));
-    Serial.print(")");
+    return;
   }
-  Serial.println("");
-  
-  Serial.print("state: ");
-  Serial.println(state);
-  Serial.print("last selector pos: ");
-  Serial.println(last_selector_pos);
 
-  // history gets printed when we finish it
-
-  if (state == 2)
+  if (debug_state == 0)
   {
+    // print out position of the pot
+    Serial.print("pot: ");
+    Serial.println(getSelectorGearPosition());
+    // print out the three photoresistors.
+    Serial.print("photoresistors:");
     for (int i=0; i<3; i++)
     {
-      Serial.print("gear ");
-      Serial.print(i);
-      Serial.print("type: ");
-      Serial.print(gear_types[i]);
-      Serial.print(", orientation: ");
-      Serial.print(gear_orientations[i]);
-      Serial.println("");
+      Serial.print(" ");
+      Serial.print(getRawPhotoresistor(i));
+      Serial.print(" (");
+      Serial.print(analogRead(photoresistors[i]));
+      Serial.print(")");
     }
+    Serial.println("");
+    
+    Serial.print("state: ");
+    Serial.println(state);
+    Serial.print("last selector pos: ");
+    Serial.println(last_selector_pos);
+
+    // history gets printed when we finish it
+
+    if (state == 2)
+    {
+      for (int i=0; i<3; i++)
+      {
+        Serial.print("gear ");
+        Serial.print(i);
+        Serial.print("type: ");
+        Serial.print(gear_types[i]);
+        Serial.print(", orientation: ");
+        Serial.print(gear_orientations[i]);
+        Serial.println("");
+      }
+    }
+    
+    Serial.println("");
   }
-  
-  Serial.println("");
+
+  debug_state = (debug_state + 1) % DEBUG_FREQ;
 }
 
 
 void printGearRead(int i, boolean failed)
 {
-  if (debug_state > 0)
+  if (DEBUG_FREQ > 0)
   {
     Serial.print("GEAR ");
     Serial.print(i);
