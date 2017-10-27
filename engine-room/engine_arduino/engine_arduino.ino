@@ -14,6 +14,9 @@
 #define YELLOW rgb_color(255, 255, 0)
 #define OFF rgb_color(0, 0, 0)
 
+// TODO(bhomberg): update pin numbers
+// LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
 PololuLedStrip<2> leds;
 rgb_color colors[STRIP_LENGTH];
 
@@ -22,6 +25,7 @@ rgb_color colors[STRIP_LENGTH];
 #define SWITCH_WALL 3  // That's a wall, not a switch.
 
 #define NO 98  // Represents no pin
+const int SWITCH_PINS[] = {
    8,  7,  6,  5,  4, NO,  3,
   NO, 13, 12, NO, 11, 10,  9,
   20, 19, 18, 17, 16, 15, 14,
@@ -196,9 +200,6 @@ rgb_color getOff() {
   return rgb_color(0, 0, 0);
 }
 
-// TODO(bhomberg): update pin numbers
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-
 // Arduino setup() and loop()
 void setup() {
   if (USE_SERIAL) {
@@ -216,12 +217,8 @@ void setup() {
   
   // PololuLedStripBase::interruptFriendly = true;
 
-  for (uint16_t i = 0; i < STRIP_LENGTH; i++) {
-    colors[i] = GREEN;
-  }
-
-  lcd.begin(20, 4);
-  lcd.print("turn the lights on!  but do it right!");
+  // lcd.begin(20, 4);
+  // lcd.print("turn the lights on!  but do it right!");
 }
 
 //void loop() {
