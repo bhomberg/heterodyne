@@ -15,8 +15,8 @@ const int SWITCH_WALL = 3;  // That's a wall, not a switch.
 const int NO = -1;  // Represents no pin
 const int SWITCH_PINS_OFFSET = 0;
 const int SWITCH_PINS[] = {
-   2,  3,  4,  5,  6,  7,  8,
-   9, 10, 11, 12, 13, 14, 15,
+   A0,  A1,  A2,  A4,  6,  7,  8,
+   9, 10, A5, A6, 13, 14, 15,
   16, 17, 18, 19, 20, 21, 22,
   23, 24, 25, 26, 27, 28, 29,
   30, 31, 32, 33, 34, 35, 36,
@@ -198,7 +198,7 @@ rgb_color getOff() {
 }
 
 // TODO(bhomberg): update pin numbers
-LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // Arduino setup() and loop()
 void setup() {
@@ -211,7 +211,7 @@ void setup() {
     pinMode(pin, INPUT);
   }
 
-  lcd.begin(16, 2);
+  lcd.begin(20, 4);
   lcd.print("turn the lights on!  but do it right!");
 }
 
