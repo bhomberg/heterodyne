@@ -85,6 +85,9 @@ int getSwitchValue(int row, int col) {
 }
 
 bool isSwitchOn(int row, int col) {
+  if (!isValid(row, col)) {
+    return false;
+  }
   return getSwitchValue(row, col) == SWITCH_ON;
 }
 
@@ -113,6 +116,15 @@ int directionalIlluminationCount(int row, int col, int dr, int dc) {
     col += dc;
   }
   return count;
+}
+
+int adjacentLightsCount(int row, int col) {
+  return (
+      isSwitchOn(row - 1, col) +
+      isSwitchOn(row + 1, col) +
+      isSwitchOn(row, col - 1) +
+      isSwitchOn(row, col + 1)
+  );
 }
 
 int illuminationCount(int row, int col) {
@@ -152,6 +164,7 @@ void setAllBlue() {
 bool update() {
   bool anyInvalid = false;
   bool anyEmpty = false;
+  bool anyWallConstrainsViolated = false;
   for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
     int row = getRow(index);
     int col = getCol(index);
@@ -174,8 +187,15 @@ bool update() {
         setColor(row, col, OFF);  // Light that's still off.
       }
     }
+    // TODO(dbieber): Add wall counts.
+    if (PUZZLE[index] != E) {
+      int count = adjacentLightsCount(row, col);
+      if (count != PUZZLE[index]) {
+        anyWallConstrainsViolated = true;
+      }
+    }
   }
-  bool victory = !anyInvalid && !anyEmpty;
+  bool victory = !anyInvalid && !anyEmpty && !anyWallConstrainsViolated;
   return victory;
 }
 
