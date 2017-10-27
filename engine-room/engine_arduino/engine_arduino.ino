@@ -161,6 +161,18 @@ void setAllBlue() {
   }
 }
 
+void sendRedLightsMessage() {
+  if (USE_SERIAL) {
+    Serial.println(10);  // Send "Ahhhhhh!" audio signal.
+  }
+}
+
+void sendBadLightsMessage() {
+  if (USE_SERIAL) {
+    Serial.println(11);  // Send "I don't like the lights." audio signal.
+  }
+}
+
 bool update() {
   bool anyInvalid = false;
   bool anyEmpty = false;
@@ -174,8 +186,7 @@ bool update() {
       if (illuminationCount(row, col) > 1) {
         anyInvalid = true;
         setColor(row, col, RED);  // Conflicting lights.
-        // TODO(dbieber): Send message
-        // Serial.println(10);  // Send "Ahhhhhh!" audio signal.
+        sendRedLightsMessage();  // Send "Ahhhhhh!" audio signal.
       } else {
         setColor(row, col, GREEN);  // Light you've turned on directly.
       }
@@ -195,7 +206,14 @@ bool update() {
       }
     }
   }
+  
   bool victory = !anyInvalid && !anyEmpty && !anyWallConstrainsViolated;
+
+  if (!anyEmpty && !victory) { // Board is full but incorrect.
+    sendBadLightsMessage();  // Send "I don't like the lights." audio signal.
+  }
+
+  
   return victory;
 }
 
@@ -320,4 +338,14 @@ void loop() {
   leds.write(colors, STRIP_LENGTH);
   delay(10);
 }
+
+//void loop() {
+//  bool victory = update();
+//  leds.write(colors, STRIP_LENGTH);
+//  delay(50);
+//  if (victory) {
+//    delay(500);
+//    setAllBlue();
+//  }
+//}
 
