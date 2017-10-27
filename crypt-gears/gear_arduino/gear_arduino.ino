@@ -1,18 +1,22 @@
 // PIN NUMBERS
 int output_lights[7] = {38, 39, 40, 41, 42, 43, 44};
 
-// TODO(benkraft): Do we still need these?
-int gear_lodged[3] = {45, 46, 47};
+int red_button = 30;
+
+int calibration_light = 31;
 
 int pot = A0;
 
 int photoresistors[3] = {A1, A2, A3};
 
-// TODO(bhomberg): calculate these numbers for real once mechanism is built; this is approx
-// TODO(benkraft): Reverse these if necesesary to match how I'm considering
-// selector state.
-int pot_locs[8] = {100, 200, 300, 400, 500, 600, 700, 800};
+// CALIBRATION
 
+// if the potentiometer is between pot_locs[2*i] and pod_locs[2*i+1], then we 
+// say we are in position i.  otherwise, we are between positions.
+int pot_locs[14] = {1024, 885, 825, 690, 640, 450, 390, 280, 190, 70, 50, 24, 12, 0};
+
+// above this = white; below = black (unlodged is undefined)
+int photoresistor_thresholds[3] = {28, 6, 15};
 
 // STATE OF THE WORLD
 
@@ -30,7 +34,7 @@ int last_selector_pos = 0;
 
 // photoresistor_history[i][j] is the state of the photoresistor i when we were
 // at selector position j.  Only meaningful in state 1, and then only for
-// 0 <= j < the current selector gear position.  When we transition to state 2
+// 0 <= j <= the current selector gear position.  When we transition to state 2
 // we use this to populate gear_types and gear_orientations.
 // NOTE: The photoresistor is positioned down.
 boolean photoresistor_history[3][7];
@@ -50,6 +54,11 @@ int gear_orientations[3];
 // Note they get filled in in reverse order (see note by selector pos).
 boolean correct_positions[7];
 
+// -1 if not blinking, 0..19 when blinking (0..9 = on, 10..19 = off)
+int calibration_state = -1;
+
+// 0..9 or -1 to disable debug; only show state on 0
+int debug_state = 0;
 
 // CONSTANTS DEFINING THE PUZZLE
 
@@ -83,22 +92,30 @@ void setup()
     pinMode(output_lights[i], OUTPUT);
     digitalWrite(output_lights[i], LOW);
   }
-  
-  // init all outputs for gear being lodged correctly
-  for(int i=0; i<3; i++)
-  {
-    pinMode(gear_lodged[i], OUTPUT);
-    digitalWrite(gear_lodged[i], LOW);
-  }
 }
 
 // this is run continuously after setup has completed
 void loop() 
 {
+  delay(50);
+  if (debug_state == 0)
+  {
+    printState();
+  }
+  if (debug_state >= 0)
+  {
+    debug_state = (debug_state + 1) % 20;
+  }
+  
   int selector_pos = getSelectorGearPosition();
-  if (selector_pos == -1)
+  if (selector_pos == -2)
   {
     sendCastleErrorMessage();
+    return;
+  }
+  else if (selector_pos == -1)
+  {
+    // we haven't made it to a new position yet, do nothing.
     return;
   }
 
@@ -107,17 +124,20 @@ void loop()
   // position we immediately do what we would have done there.
   if (state == 0)
   {
+    setCalibration(false);
     // TODO(benkraft): Should we only be starting here when the red button is
     // pressed?
-    if (selector_pos == 0)
+    if (selector_pos == 0 && buttonPressed())
     {
       // We have started calibrating!
       state = 1;
+      last_selector_pos = -1; // state 1 case will fix
     }
   }
 
   if (state == 1)
   {
+    stepCalibration();
     if (selector_pos < last_selector_pos
         || selector_pos > last_selector_pos + 1)
     {
@@ -150,13 +170,45 @@ void loop()
         int types_seen = 0;
         for (int i=0; i<3; i++)
         {
+          if (debug_state > 0)
+          {
+            Serial.print("GEAR ");
+            Serial.print(i);
+          }
           if (!computeGearPosition(i))
           {
             failed = true;
+            if (debug_state > 0)
+            {
+              Serial.println(" none");
+            }
           }
           else
           {
             types_seen |= 1 << gear_types[i];
+            if (debug_state > 0)
+            {
+              Serial.print(" type ");
+              Serial.print(gear_types[i]);
+              Serial.print(", orientation ");
+              Serial.println(gear_orientations[i]);
+            }
+          }
+        }
+
+        if (debug_state > 0)
+        {
+          for (int i=0; i<3; i++)
+          {
+            Serial.print("history ");
+            Serial.print(i);
+            Serial.print(":");
+            for (int j=0; j<=last_selector_pos; j++)
+            {
+              Serial.print(" ");
+              Serial.print(photoresistor_history[i][j]);
+            }
+            Serial.println("");
           }
         }
 
@@ -186,6 +238,7 @@ void loop()
 
   if (state == 2)
   {
+    setCalibration(true);
     if (selector_pos > last_selector_pos
         || selector_pos < last_selector_pos - 1)
     {
@@ -225,10 +278,15 @@ void loop()
     }
   }
 
+  if (state == 3 && buttonPressed())
+  {
+    state = 0;
+    resetLights();
+  }
+
   // TODO(benkraft): How do we exit state 3?  When the button is pressed?
 
   last_selector_pos = selector_pos;
-  delay(50);
 }
 
 
@@ -254,12 +312,12 @@ boolean computeGearPosition(int i)
     gear_types[i] = 1;
     if (photoresistor_history[i][1] && photoresistor_history[i][4])
     {
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 1;
       return true;
     }
     else if (photoresistor_history[i][2] && photoresistor_history[i][5])
     {
-      gear_orientations[i] = 1;
+      gear_orientations[i] = 2;
       return true;
     }
     else
@@ -311,31 +369,31 @@ boolean computeGearPosition(int i)
     if (!photoresistor_history[i][1] && !photoresistor_history[i][4])
     {
       gear_types[i] = 0;
-      gear_orientations[i] = 0;
+      gear_orientations[i] = 2;
       return true;
     }
     else if (!photoresistor_history[i][2] && !photoresistor_history[i][5])
     {
       gear_types[i] = 0;
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 0;
       return true;
     }
     else if (!photoresistor_history[i][0] && !photoresistor_history[i][4])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 1;
+      gear_orientations[i] = 2;
       return true;
     }
     else if (!photoresistor_history[i][1] && !photoresistor_history[i][5])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 0;
+      gear_orientations[i] = 3;
       return true;
     }
     else if (!photoresistor_history[i][2] && !photoresistor_history[i][6])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 3;
+      gear_orientations[i] = 0;
       return true;
     }
     else
@@ -350,7 +408,7 @@ boolean computeGearPosition(int i)
     if (!photoresistor_history[i][3])
     {
       gear_types[i] = 2;
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 1;
       return true;
       
     }
@@ -475,12 +533,6 @@ void showCorrect(int n)
   // TODO(bhomberg): open solenoid??
 }
 
-// turn on light for gear #n lodged, or not
-void showLodged(int n, boolean isLodged)
-{
-  digitalWrite(gear_lodged[n], isLodged ? HIGH : LOW);
-}
-
 // Reset all the lights.  (Caller should reset internal state.)
 void resetLights()
 {
@@ -489,12 +541,35 @@ void resetLights()
   {
     digitalWrite(output_lights[i], LOW);
   }
-  for(int i=0; i<3; i++) 
-  {
-    digitalWrite(gear_lodged[i], LOW);
-  }
 
   // TODO(bhomberg): close all solenoids (??)
+  digitalWrite(calibration_light, LOW);
+}
+
+void setCalibration(boolean on)
+{
+  calibration_state = -1;
+  if (on)
+  {
+    digitalWrite(calibration_light, HIGH);
+  }
+  else
+  {
+    digitalWrite(calibration_light, LOW);
+  }
+}
+
+void stepCalibration()
+{
+  calibration_state = (calibration_state + 1) % 20;
+  if (calibration_state < 10)
+  {
+    digitalWrite(calibration_light, HIGH);
+  }
+  else
+  {
+    digitalWrite(calibration_light, LOW);
+  }
 }
 
 // Tell the user they have won!
@@ -518,13 +593,55 @@ void printState()
 {
   // TODO(benkraft): internal state too?
   // print out position of the pot
-  Serial.print(getSelectorGearPosition());
+  Serial.print("pot: ");
+  Serial.println(getSelectorGearPosition());
   // print out the three photoresistors.
+  Serial.print("photoresistors:");
   for (int i=0; i<3; i++)
   {
     Serial.print(" ");
     Serial.print(getPhotoresistor(i));
+    Serial.print(" (");
+    Serial.print(analogRead(photoresistors[i]));
+    Serial.print(")");
   }
+  Serial.println("");
+  
+  Serial.print("state: ");
+  Serial.println(state);
+  Serial.print("last selector pos: ");
+  Serial.println(last_selector_pos);
+
+  if (state == 1)
+  {
+    for (int i=0; i<3; i++)
+    {
+      Serial.print("history ");
+      Serial.print(i);
+      Serial.print(":");
+      for (int j=0; j<=last_selector_pos; j++)
+      {
+        Serial.print(" ");
+        Serial.print(photoresistor_history[i][j]);
+      }
+      Serial.println("");
+    }
+  }
+
+  if (state == 2)
+  {
+    for (int i=0; i<3; i++)
+    {
+      Serial.print("gear ");
+      Serial.print(i);
+      Serial.print("type: ");
+      Serial.print(gear_types[i]);
+      Serial.print(", orientation: ");
+      Serial.print(gear_orientations[i]);
+      Serial.println("");
+    }
+  }
+  
   Serial.println("");
 }
 
@@ -532,10 +649,11 @@ void printState()
 // INPUT READING
 
 // True if white gear is in front of photo resistor.  False if black paper.
+// Undefined if gear not lodged.
 boolean getPhotoresistor(int i) 
 {
   // sees white gear
-  if(analogRead(photoresistors[i]) > 850)
+  if(analogRead(photoresistors[i]) > photoresistor_thresholds[i])
   {
     return true;
   }
@@ -544,22 +662,34 @@ boolean getPhotoresistor(int i)
 }
 
 // based on the pot value, we know which of the 7 positions the selector gear is in
-// returns an int 0-6 inclusive or -1 in error cases
-// if the pot value is out of range, throws an error and informs the castle operators that the puzzle is broken
-// the position of the selector gear uniquely determines the position of all of the other gears
+// returns an int 0-6 inclusive, -1 if we are in between positions, and -2 if we
+// have an unreasonable value
 int getSelectorGearPosition() 
 {
   int val = analogRead(pot);
+
+  if (val > pot_locs[0])
+  {
+    return -2;
+  }
   
   for (int i=0; i<7; i++)
   {
-    if (val > pot_locs[i] && val < pot_locs[i+1])
+    if (val > pot_locs[2*i])
+    {
+      return -1;
+    }
+    else if (val <= pot_locs[2*i] && val >= pot_locs[2*i+1])
     {
       return i;
     }
   }
-  
-  // else: val is below pot_locs[0] or greater than pot_locs[7]
-  // puzzle is borken
-  return -1;
+
+  return -2;
+}
+
+// True if the button is pressed.
+boolean buttonPressed()
+{
+  return digitalRead(red_button);
 }
