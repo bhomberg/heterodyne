@@ -1,30 +1,47 @@
 #include <PololuLedStrip.h>
 #include <LiquidCrystal.h>
 
-const int GRIDSIZE = 7;
-const int STRIP_LENGTH = GRIDSIZE * GRIDSIZE;
+#define STRIP_LENGTH 41
+#define GRIDSIZE 7
 
-const int LED_STRIP_PIN = 2;
-PololuLedStrip<LED_STRIP_PIN> leds;
+#define DEBUG_FLAG true
+#define USE_SERIAL false
+
+// GRB color order... 
+#define RED rgb_color(0, 255, 0)
+#define GREEN rgb_color(255, 0, 0)
+#define BLUE rgb_color(0, 0, 255)
+#define YELLOW rgb_color(255, 255, 0)
+#define OFF rgb_color(0, 0, 0)
+
+PololuLedStrip<2> leds;
 rgb_color colors[STRIP_LENGTH];
 
-const int SWITCH_ON = 1;
-const int SWITCH_OFF = 2;
-const int SWITCH_WALL = 3;  // That's a wall, not a switch.
+#define SWITCH_ON 1
+#define SWITCH_OFF 2
+#define SWITCH_WALL 3  // That's a wall, not a switch.
 
-const int NO = -1;  // Represents no pin
-const int SWITCH_PINS_OFFSET = 0;
-const int SWITCH_PINS[] = {
-   A0,  A1,  A2,  A4,  6,  7,  8,
-   9, 10, A5, A6, 13, 14, 15,
-  16, 17, 18, 19, 20, 21, 22,
-  23, 24, 25, 26, 27, 28, 29,
-  30, 31, 32, 33, 34, 35, 36,
-  37, 38, 39, 40, 41, 42, 43,
-  44, 45, 46, 47, 48, 49, 50,
+#define NO 98  // Represents no pin
+   8,  7,  6,  5,  4, NO,  3,
+  NO, 13, 12, NO, 11, 10,  9,
+  20, 19, 18, 17, 16, 15, 14,
+  25, NO, 24, 23, 22, NO, 21,
+  32, 31, 30, 29, 28, 27, 26,
+  37, 36, 35, NO, 34, 33, NO,
+  43, NO, 42, 41, 40, 39, 38,
 };
 
-const int E = 99; // Empty cell. Everything else is a wall.
+const uint16_t LED_INDEXES[] = {
+   6,  5, 38, 37, 32, NO, 31,
+  NO,  4, 39, NO, 33, 29, 30,
+   7,  3, 40, 36, 34, 28, 27,
+   8, NO,  1,  0, 35, NO, 26,
+   9,  2, 15, 16, 20, 21, 25,
+  10, 12, 14, NO, 19, 22, NO,
+  11, NO, 13, 17, 18, 23, 24,
+};
+
+#define E 99  // Empty cell. Everything else is a wall.
 const int PUZZLE[] = {
   E, E, E, E, E, 0, E,
   2, E, E, 2, E, E, E,
@@ -49,7 +66,7 @@ int getCol(int grid_index) {
 
 int getSwitchPin(int row, int col) {
   int index = getGridIndex(row, col);
-  return SWITCH_PINS[index] + SWITCH_PINS_OFFSET;
+  return SWITCH_PINS[index];
 }
 
 int getSwitchValue(int row, int col) {
@@ -63,7 +80,7 @@ int getSwitchValue(int row, int col) {
   }
 }
 
-int isSwitchOn(int row, int col) {
+bool isSwitchOn(int row, int col) {
   return getSwitchValue(row, col) == SWITCH_ON;
 }
 
@@ -113,14 +130,18 @@ bool isWall(int row, int col) {
 
 void setColor(int row, int col, rgb_color color) {
   int index = getGridIndex(row, col);
-  colors[index] = color;
+  uint16_t colorIndex = LED_INDEXES[index];
+  if (colorIndex == NO) {
+    return;
+  }
+  colors[colorIndex] = color;
 }
 
 void setAllBlue() {
   for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
     int row = getRow(index);
     int col = getCol(index);
-    setColor(row, col, getBlue());  // Victory! Make everything blue.
+    setColor(row, col, BLUE);  // Victory! Make everything blue.
   }
 }
 
@@ -135,18 +156,18 @@ bool update() {
     } else if (isSwitchOn(row, col)) {
       if (illuminationCount(row, col) > 1) {
         anyInvalid = true;
-        setColor(row, col, getRed());  // Conflicting lights.
+        setColor(row, col, RED);  // Conflicting lights.
         // TODO(dbieber): Send message
         // Serial.println(10);  // Send "Ahhhhhh!" audio signal.
       } else {
-        setColor(row, col, getGreen());  // Light you've turned on directly.
+        setColor(row, col, GREEN);  // Light you've turned on directly.
       }
     } else {
       if (illuminationCount(row, col) > 0) {
-        setColor(row, col, getYellow());  // Light you've turned on indirectly.
+        setColor(row, col, YELLOW);  // Light you've turned on indirectly.
       } else {
         anyEmpty = true;
-        setColor(row, col, getOff());  // Light that's still off.
+        setColor(row, col, OFF);  // Light that's still off.
       }
     }
   }
@@ -156,45 +177,23 @@ bool update() {
 
 // Color definitions
 rgb_color getGreen() {
-  rgb_color color;
-  color.red = 255;
-  color.blue = 0;
-  color.green = 0;
-  return color;
+  return rgb_color(255, 0, 0);
 }
 
 rgb_color getBlue() {
-  rgb_color color;
-  color.red = 0;
-  color.blue = 255;
-  color.green = 0;
-  return color;
+  return rgb_color(0, 255, 0);
 }
 
 rgb_color getRed() {
-  rgb_color color;
-  color.red = 0;
-  color.blue = 0;
-  color.green = 255;
-  return color;
+  return rgb_color(0, 0, 255);
 }
 
 rgb_color getYellow() {
-  rgb_color color;
-  color.red = 255;
-  color.blue = 0;
-  color.green = 255;
-  return color;
+  return rgb_color(255, 0, 255);
 }
 
 rgb_color getOff() {
-  // TODO(dbieber): How do you actually turn a light off?
-  // bhomberg -- this should work as you expect it to
-  rgb_color color;
-  color.red = 0;
-  color.blue = 0;
-  color.green = 0;
-  return color;
+  return rgb_color(0, 0, 0);
 }
 
 // TODO(bhomberg): update pin numbers
@@ -202,27 +201,106 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // Arduino setup() and loop()
 void setup() {
-  Serial.begin(9600);
-  pinMode(LED_BUILTIN, OUTPUT);
+  if (USE_SERIAL) {
+    Serial.begin(9600);
+  }
+  // pinMode(LED_BUILTIN, OUTPUT);
 
   // Initial switch pins as INPUTs.
   for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
     int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
-    pinMode(pin, INPUT);
+    if (pin != NO) {
+      pinMode(pin, INPUT);      
+    }
+  }
+  
+  // PololuLedStripBase::interruptFriendly = true;
+
+  for (uint16_t i = 0; i < STRIP_LENGTH; i++) {
+    colors[i] = GREEN;
   }
 
   lcd.begin(20, 4);
   lcd.print("turn the lights on!  but do it right!");
 }
 
+//void loop() {
+//  if (DEBUG_FLAG) {
+//    if (USE_SERIAL) {
+//      Serial.println("DEBUG");
+//    }
+//    for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
+//      int value = getSwitchValue(getRow(index), getCol(index));
+//      if (index % GRIDSIZE == 0) {
+//        if (USE_SERIAL) {
+//          Serial.println("");
+//        }
+//      }
+//      if (value == SWITCH_WALL) {    
+//        if (USE_SERIAL) {
+//          Serial.print("X");
+//        }
+//      } else {
+//        if (USE_SERIAL) {
+//          Serial.print(value);
+//        }
+//      }
+//      
+//      if (USE_SERIAL) {
+//        Serial.print(' ');
+//      }
+//    }
+//
+//    if (USE_SERIAL) {
+//      Serial.print('\n');
+//      Serial.print('\n');
+//      Serial.flush();
+//    }
+////
+//    if (isSwitchOn(3, 3)) {
+//      //Serial.println("YES");
+//      setColor(3, 3, RED);
+//    } else {
+//      //Serial.println("NO");
+//      setColor(3, 3, BLUE);
+//    }
+//    leds.write(colors, STRIP_LENGTH);
+//    delay(50);
+//  } else {
+//    bool victory = update();
+//    // leds.write(colors, STRIP_LENGTH);
+//    if (victory) {
+//      delay(500);
+//      setAllBlue();
+//    }
+//  }
+//
+//  delay(1000);
+//}
+
 void loop() {
-  delay(20);
-  bool victory = update();
-  leds.write(colors, STRIP_LENGTH);
-  if (victory) {
-    delay(500);
-    setAllBlue();
-    lcd.clear();
-    lcd.print("good work! that was the Z4Z4P i needed!");
+  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
+  {
+    colors[i] = OFF;
   }
+  setColor(3, 3, BLUE);
+  setColor(3, 2, GREEN);
+  setColor(3, 0, RED);
+  setColor(3, 4, YELLOW);
+  setColor(3, 6, OFF);
+  setColor(0, 0, OFF);
+  setColor(0, 3, GREEN);
+  //  1. You must disconnect 5V to upload properly.
+  //  2. Why does the following not work?
+//  if (isSwitchOn(3, 3)) {
+//    setColor(4, 3, GREEN);
+//  } else {
+//    setColor(4, 3, RED);
+//  }
+  setColor(0, 3, BLUE);
+  setColor(4, 3, YELLOW);
+//  isSwitchOn(3, 3);
+  leds.write(colors, STRIP_LENGTH);
+  delay(10);
 }
+
