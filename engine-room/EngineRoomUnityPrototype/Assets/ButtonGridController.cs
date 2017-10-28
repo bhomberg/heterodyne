@@ -18,9 +18,17 @@ public class ButtonGridController : MonoBehaviour {
 	public AudioClip tooManyBlackClip;
 	public AudioClip tooManyWhiteClip;
 
+	public AudioClip markBad1;
+	public AudioClip markBad2;
+	public AudioClip markBad3;
+
+	public Button resetButton;
 	public Button clueButton;
 	public Text castleText;
 	public Text clueText;
+
+	private bool welcomed = false;
+	private int wrongAnswers = 0;
 
 	public int gridSize;
 	public string board;
@@ -44,30 +52,35 @@ public class ButtonGridController : MonoBehaviour {
 		new Pair<int, int> (-1, 0),
 	};
 	private Pair<Color, string>[] colors = {
+		new Pair<Color, string> (new Color (1, 1, 0), "yellow"),
 		new Pair<Color, string>(Color.red, "red"),
 		new Pair<Color, string>(new Color(1, 0.647f ,0), "orange"),
-		new Pair<Color, string>(new Color(1, 1, 0), "yellow"),
 		new Pair<Color, string>(Color.green, "green"),
 		new Pair<Color, string>(new Color(94.0f/255, 151.0f/255, 242.0f/255), "blue"),
-		new Pair<Color, string>(new Color(0.594f, 0, 0.51f), "purple"),
+		new Pair<Color, string>(new Color(255f/255, 105f/255, 180f/255), "pink"),
 		new Pair<Color, string>(Color.white, "white"),
-		new Pair<Color, string>(Color.black, "black"),
+		new Pair<Color, string>(new Color(0.594f, 0, 0.51f), "purple"),
 	};
-
-	private string welcomeMessage = "Castle Heterodyne: **Grumble grumble** I've trapped you in the dark, stranger! You can try turning the lights back on, but I'm very picky about my lighting.";
+		
+	private string welcomeMessage = "Castle Heterodyne: So you want to turn the lighs on? Well, you can try, but I'm very picky.";
 	private string tooManyMessage = "Castle Heterodyne: **Grumble grumble** I don't like the lights. You've turned on too many {0} switches.";
 	private string tooFewMessage = "Castle Heterodyne: **Grumble grumble**  I don't like the lights. You've turned on too few {0} switches.";
-	private string winMessage = "Castle Heterodyne: **gasp** That lighting is... beautiful. Maybe you're not so bad after all. (You win)";
-	private string overheatingMessage = "Castle Heterodyne: Ahhhhhh! The grid's overheating. Turn off those glowy red lights NOW or you'll catch this place on fire!";
+	private string oldWinMessage = "Castle Heterodyne: **gasp** That lighting is... beautiful. Maybe you're not so bad after all. (You win)";
+	private string overheatingMessage = "Castle Heterodyne: Hot, hot, hot! Turn off those red lights this instant!";
+
+	private string badMessage1 = "Castle Heterodyne: Oh! Those lights hurt my eyes. And I don't even have eyes! Keep working.";
+	private string badMessage2 = "Castle Heterodyne: Do you even know what good lighting is? Keep going.";
+	private string badMessage3 = "Castle Heterodyne: Keep going.";
+	private string winMessage = "Castle Heterodyne: The passcode is Z4Z4P.";
 
 	// Use this for initialization
 	void Start () {
-		
+		castleText.text = "";
 
 		wallConstraints = new Dictionary<int, Pair<int, string>> ();
 		clueButton.onClick.AddListener(ShowClue);
+		resetButton.onClick.AddListener(ResetPuzzle);
 	
-		showMessage(welcomeMessage);
 		clueText.text = "";
 
 		clues = new List<string> ();
@@ -114,6 +127,8 @@ public class ButtonGridController : MonoBehaviour {
 			Collider2D hitCollider = Physics2D.OverlapPoint (mousePosition);
 
 			if (hitCollider && hitCollider.tag == "Button") {
+				
+
 				int y = (int)hitCollider.transform.position.y;
 				int x = (int)hitCollider.transform.position.x;
 				int row = y + gridSize / 2;
@@ -128,6 +143,10 @@ public class ButtonGridController : MonoBehaviour {
 				else if (state [index]) {
 					TurnOff (index);
 				} else {
+					if (!welcomed) {
+						welcomed = true;
+						showMessage(welcomeMessage);
+					}
 					TurnOn (index);
 				}
 
@@ -204,25 +223,46 @@ public class ButtonGridController : MonoBehaviour {
 		} else if (message == winMessage) {
 			PlayOneShot (winClip);
 		} else if (message == string.Format (tooManyMessage, "red")) {
-			PlayOneShot (tooManyRedClip);
+			// PlayOneShot (tooManyRedClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "orange")) {
-			PlayOneShot (tooManyOrangeClip);
+			// PlayOneShot (tooManyOrangeClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "yellow")) {
-			PlayOneShot (tooManyYellowClip);
+			// PlayOneShot (tooManyYellowClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "blue")) {
-			PlayOneShot (tooManyBlueClip);
+			// PlayOneShot (tooManyBlueClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "green")) {
-			PlayOneShot (tooManyGreenClip);
+			// PlayOneShot (tooManyGreenClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "purple")) {
-			PlayOneShot (tooManyPurpleClip);
+			// PlayOneShot (tooManyPurpleClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "black")) {
-			PlayOneShot (tooManyBlackClip);
+			// PlayOneShot (tooManyBlackClip);
+			PlayWrongAnswer();
 		} else if (message == string.Format (tooManyMessage, "white")) {
-			PlayOneShot (tooManyWhiteClip);
+			// PlayOneShot (tooManyWhiteClip);
+			PlayWrongAnswer();
 		}
 
 		Debug.Log (castleVoice.clip.length);
+	}
 
+	private void PlayWrongAnswer() {
+		wrongAnswers += 1;
+		if (wrongAnswers == 1) {
+			castleText.text = badMessage1;
+			PlayOneShot (markBad1);
+		} else if (wrongAnswers == 2) {
+			castleText.text = badMessage2;
+			PlayOneShot (markBad2);
+		} else {
+			castleText.text = badMessage3;
+			PlayOneShot (markBad3);
+		}
 	}
 
 	private void PlayOneShot(AudioClip clip) {
@@ -234,6 +274,21 @@ public class ButtonGridController : MonoBehaviour {
 		clueText.text = clues [nextClue];
 		nextClue++;
 		nextClue %= clues.Count;
+	}
+
+	private void ResetPuzzle() {
+		Start ();
+//		for (int index = 0; index < gridSize * gridSize; index++) {
+//			int row = GetRow (index);
+//			int col = GetCol (index);
+//			if (IsWall (row, col)) {
+//				// Do nothing...
+//				return;
+//			} else if (state [index]) {
+//				TurnOff (index);
+//			}
+//		}
+//		Render ();
 	}
 
 	private void Render() {
