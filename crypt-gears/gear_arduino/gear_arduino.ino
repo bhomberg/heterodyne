@@ -1,7 +1,7 @@
 // PIN NUMBERS
 int output_lights[7] = {38, 39, 40, 41, 42, 43, 44};
 
-int red_button = 30;
+int red_button = 53;
 
 int calibration_light = 31;
 
