@@ -108,7 +108,7 @@ int FRAME_SPEED = 10; // 100 fps
 // How many frames to wait before toggling blinking lights
 int BLINK_SPEED = 50; // 0.5s
 // How many frames to wait before logging debug data, or 0 for never
-int DEBUG_FREQ = 0; // 2s
+int DEBUG_FREQ = 3000; // 2s
 
 // MAIN TOPLEVEL STUFF
 
@@ -239,7 +239,13 @@ void loop()
   if (state == 2)
   {
     setCalibration(true);
-    if (selector_pos >= 0)
+    if (buttonPressed())
+    {
+      // Button resets.
+      state = 0;
+      resetLights();
+    }
+    else if (selector_pos >= 0)
     {
       // Fill in new connection states.
       // Usually a noop.
@@ -269,13 +275,6 @@ void loop()
         servo.write(servo_open);
         sendCastleSuccessMessage();
       }
-      else if (buttonPressed())
-      {
-        // Button resets.
-        state = 0;
-        resetLights();
-      }
-    
     }
     if (state != 3 && selector_pos < 0)
     {
