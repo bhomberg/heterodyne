@@ -6,8 +6,8 @@ import simpleaudio as sa
 ## CONFIGURATION ##
 baud_rate = 9600
 arduino_ports = {
-    'engine-room' : None, #'/dev/ttyACM1', #'/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Mega_2560_93140364233351C0A1D1-if00',
-    'crypt-gears' : None,
+    'engine-room' : None, #'/dev/ttyACM1',
+    'crypt-gears' : '/dev/ttyACM0',
     'operator' : '/dev/ttyUSB0',
     }
 arduinos = dict([(name, None) for name in arduino_ports])
@@ -22,7 +22,7 @@ def initialize_arduinos():
         if port is None:
             continue
         # Open the port, then wait for the arduino to start (opening the port resets it).
-        arduinos[name] = serial.Serial(port, baud_rate, timeout=1)
+        arduinos[name] = serial.Serial(port, baud_rate, timeout=.1)
         sleep(3)
         arduinos[name].flushInput()
         # Initialize the message state.
@@ -45,20 +45,17 @@ def get_message(arduino_name, inlcude_newline=False):
         return new_message if inlcude_newline else new_message.strip()
     return None
 
-def process_serial(arduino_name_in):
-    for arduino_name, arduino in arduinos.items():
-        if arduino is None:
-            continue
-        if not arduino_name_in == arduino_name:
-            continue
-        # If there are characters in the serial buffer,
-        # and there isn't a completed message that hasn't been used yet,
-        # get the new characters.
+def process_serial(arduino_name):
+        arduino = arduinos[arduino_name]
+        if arduino == None:
+            return
         done = False
         while (not done):
             if (not received_complete_messages[arduino_name]):
                 r = arduino.read()
                 r = r.decode('utf_8')
+                if len(r) == 0:
+                    done = True
                 if r == '\n' or r == '\r':
                     done = True
                     if len(received_messages[arduino_name]) > 0:
@@ -93,6 +90,7 @@ operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav
 
 # intro/outro sounds
 intro = "sound_bites/foolishcreaturesblastdoorsselfdestruct.wav"
+intro2 = "sound_bites/diehorribly20.wav"
 outro = "sound_bites/selfdestructcomplete.wav"
 
 
@@ -110,95 +108,18 @@ while(True):
   w = sa.WaveObject.from_wave_file(intro)
   p = w.play()
   p.wait_done()
+  w = sa.WaveObject.from_wave_file(intro2)
+  p = w.play()
+  p.wait_done()
   p = None
 
   c = 0
 
   while(time() - s < max_time and not done):
     if c % 100 == 0:
-        print("loop")
+        print("time: ", time() - s)
     sleep(.01)
     c+=1
-
-    # say puzzle messages if relevant
-    for arduino_name in received_messages:
-      # Get the latest message from the arduino if one has been received.
-        message = get_message(arduino_name)
-        if message is not None:
-            if p != None:
-                p.stop()
-                p = None
-            # Do something with the new message.
-            print('\tArduino %s says: %s' % (arduino_name, message))
-
-            # lights puzzle
-            if message == '10':
-              w = sa.WaveObject.from_wave_file(lightsound[0])
-              p = w.play()
-            if message == '11':
-              w = sa.WaveObject.from_wave_file(lightsound[1])
-              p = w.play()
-            if message == '12':
-              w = sa.WaveObject.from_wave_file(lightsound[2])
-              p = w.play()
-            if message == '13':
-              w = sa.WaveObject.from_wave_file(lightsound[3])
-              p = w.play()
-            if message == '14':
-              w = sa.WaveObject.from_wave_file(lightsound[4])
-              p = w.play()
-            if message == '15':
-              w = sa.WaveObject.from_wave_file(lightsound[5])
-              p = w.play()
-              p.wait_done()
-              p = None
-            if message == '19':
-              if (p != None):
-                p.stop()
-                p = None
-
-            # gear puzzle
-            if message == '20':
-              print("ERROR!  PUZZLE 4 is BROKEN!  ABORT!")
-              w = sa.WaveObject.from_wave_file(gearsound[0])
-              p = w.play()
-              p.wait_done()
-              p = None
-            if message == '21':
-              done = True
-              w = sa.WaveObject.from_wave_file(gearsound[1])
-              p = w.play()
-              p.wait_done()
-              p = None
-
-            # user input buttons / room buttons
-            if message == '2':
-              w = sa.WaveObject.from_wave_file(operatorsound[0])
-              p = w.play()
-              p.wait_done()
-              p = None
-            if message == '3':
-              w = sa.WaveObject.from_wave_file(operatorsound[1])
-              p = w.play()
-              p.wait_done()
-              p = None
-            if message == '4':
-              w = sa.WaveObject.from_wave_file(operatorsound[2])
-              p = w.play()
-              p.wait_done()
-              p = None
-            if message == '5' and not doom2:
-              w = sa.WaveObject.from_wave_file(operatorsound[3])
-              p = w.play()
-              p.wait_done()
-              p = None
-              doom2 = True
-            if message == '6' and not enigma:
-              w = sa.WaveObject.from_wave_file(operatorsound[4])
-              p = w.play()
-              p.wait_done()
-              p = None
-              enigma = True
 
     # say time warnings
     for i in range(4):
@@ -209,6 +130,88 @@ while(True):
           p = w.play()
           p.wait_done()
           p = None
+
+    # say puzzle messages if relevant
+    for arduino_name in received_messages:
+        # Get the latest message from the arduino if one has been received.
+        message = get_message(arduino_name)
+        if message is not None:
+            if p != None:
+                p.stop()
+                p = None
+            # Do something with the new message.
+            print('\tArduino %s says: %s' % (arduino_name, message))
+
+        # lights puzzle
+        if message == '10':
+              w = sa.WaveObject.from_wave_file(lightsound[0])
+              p = w.play()
+        if message == '11':
+              w = sa.WaveObject.from_wave_file(lightsound[1])
+              p = w.play()
+        if message == '12':
+              w = sa.WaveObject.from_wave_file(lightsound[2])
+              p = w.play()
+        if message == '13':
+              w = sa.WaveObject.from_wave_file(lightsound[3])
+              p = w.play()
+        if message == '14':
+              w = sa.WaveObject.from_wave_file(lightsound[4])
+              p = w.play()
+        if message == '15':
+              w = sa.WaveObject.from_wave_file(lightsound[5])
+              p = w.play()
+              p.wait_done()
+              p = None
+        if message == '19':
+              if (p != None):
+                p.stop()
+                p = None
+
+        # gear puzzle
+        if message == '21':
+              print("ERROR!  PUZZLE 4 is BROKEN!  ABORT!")
+              w = sa.WaveObject.from_wave_file(gearsound[0])
+              p = w.play()
+              p.wait_done()
+              p = None
+        if message == '20':
+              done = True
+              w = sa.WaveObject.from_wave_file(gearsound[1])
+              p = w.play()
+              p.wait_done()
+              p = None
+
+        # user input buttons / room buttons
+        if message == '2':
+              w = sa.WaveObject.from_wave_file(operatorsound[0])
+              p = w.play()
+              p.wait_done()
+              p = None
+        if message == '3':
+              w = sa.WaveObject.from_wave_file(operatorsound[1])
+              p = w.play()
+              p.wait_done()
+              p = None
+        if message == '4':
+              w = sa.WaveObject.from_wave_file(operatorsound[2])
+              p = w.play()
+              p.wait_done()
+              p = None
+        if message == '5' and not doom2:
+              w = sa.WaveObject.from_wave_file(operatorsound[3])
+              p = w.play()
+              p.wait_done()
+              p = None
+              doom2 = True
+        if message == '6' and not enigma:
+              w = sa.WaveObject.from_wave_file(operatorsound[4])
+              p = w.play()
+              p.wait_done()
+              p = None
+              enigma = True
+
+
 
   # if time is out, but has not won
   if not done:
