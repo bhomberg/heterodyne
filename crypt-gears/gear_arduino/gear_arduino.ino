@@ -108,7 +108,7 @@ int FRAME_SPEED = 10; // 100 fps
 // How many frames to wait before toggling blinking lights
 int BLINK_SPEED = 50; // 0.5s
 // How many frames to wait before logging debug data, or 0 for never
-int DEBUG_FREQ = 10000; // 2s
+int DEBUG_FREQ = 0; // 2s
 
 // MAIN TOPLEVEL STUFF
 
@@ -188,7 +188,7 @@ void loop()
       }
     }
     // If we are at the end, move on to state 2.
-    else if (selector_pos < 0 && last_selector_pos == 6)
+    else if (selector_pos < 0 && last_selector_pos == 6 && photoresistor_counts[0][6] > 5)
     {
       // This fills in gear_types and gear_orientations.
       // We check that it passes each time, and that
@@ -239,15 +239,7 @@ void loop()
   if (state == 2)
   {
     setCalibration(true);
-    if (selector_pos >= 0 && (selector_pos > last_selector_pos
-        || selector_pos < last_selector_pos - 1))
-    {
-      Serial.println("RESET");
-      // They have gone backwards or too fast.
-      state = 0;
-      resetLights();
-    }
-    else if (selector_pos >= 0)
+    if (selector_pos >= 0)
     {
       // Fill in new connection states.
       // Usually a noop.
