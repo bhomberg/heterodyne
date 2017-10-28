@@ -25,17 +25,7 @@ rgb_color colors[STRIP_LENGTH];
 #define SWITCH_WALL 3  // That's a wall, not a switch.
 
 #define NO 98  // Represents no pin
-const int SWITCH_PINS[] = {
-   8,  7,  6,  5,  4, NO,  3,
-  NO, 13, 12, NO, 11, 10,  9,
-  20, 19, 18, 17, 16, 15, 14,
-  25, NO, 24, 23, 22, NO, 21,
-  32, 31, 30, 29, 28, 27, 26,
-  37, 36, 35, NO, 34, 33, NO,
-  43, NO, 42, 41, 40, 39, 38,
-};
-
-const uint16_t LED_INDEXES[] = {
+const uint16_t SWITCH_PINS[] = {
   13,  6, 30,  9, 36, NO, 38,
   NO,  7, 28, NO, 10, 32, 37,
    8, 19, 18, 17, 16, 15, 14,
@@ -45,6 +35,17 @@ const uint16_t LED_INDEXES[] = {
   39, NO, 35, 45, 47, 53, 34,
 };
 
+const uint16_t LED_INDEXES[] = {
+   6,  5, 38, 37, 32, NO, 31,
+  NO,  4, 39, NO, 33, 29, 30,
+   7,  3, 40, 36, 34, 28, 27,
+   8, NO,  1,  0, 35, NO, 26,
+   9,  2, 15, 16, 20, 21, 25,
+  10, 12, 14, NO, 19, 22, NO,
+  11, NO, 13, 17, 18, 23, 24,
+};
+
+// NEW:
 #define E 99  // Empty cell. Everything else is a wall.
 const int PUZZLE[] = {
   E, E, E, E, E, 0, E,
