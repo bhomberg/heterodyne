@@ -20,11 +20,10 @@ int pot_locs[14] = {1024, 885,
                     390, 280,
                     190, 70,
                     50, 24,
-                    12, 0};
+                    12, 5};
 
 // above this = white; below = black (unlodged is undefined)
-// TODO(benkraft): Recompute after we move them.
-int photoresistor_thresholds[3] = {28, 6, 15};
+int photoresistor_thresholds[3] = {90, 50, 70};
 
 // STATE OF THE WORLD
 
@@ -49,8 +48,8 @@ int last_selector_pos = 0;
 // gear position.  When we transition to state 2 we use this to populate
 // gear_types and gear_orientations.
 // NOTE: The photoresistor is positioned down.
-int photoresistor_totals[3][7];
-int photoresistor_counts[3][7];
+long int photoresistor_totals[3][7];
+long int photoresistor_counts[3][7];
 
 // The state of the ith gear, if we know it.  This is not its current position,
 // but rather the position corresponding to selector gear 0!  Only meaningful
@@ -95,11 +94,11 @@ int gear_2_connections[9][2] = {
 // SETTINGS
 
 // How long in ms we wait between loops
-int FRAME_SPEED = 50; // 20 fps
+int FRAME_SPEED = 10; // 100 fps
 // How many frames to wait before toggling blinking lights
-int BLINK_SPEED = 10; // 0.5s
+int BLINK_SPEED = 50; // 0.5s
 // How many frames to wait before logging debug data, or 0 for never
-int DEBUG_FREQ = 20; // 1s
+int DEBUG_FREQ = 100; // 1s
 
 // MAIN TOPLEVEL STUFF
 
@@ -114,24 +113,17 @@ void setup()
     pinMode(output_lights[i], OUTPUT);
     digitalWrite(output_lights[i], LOW);
   }
+
 }
 
 // this is run continuously after setup has completed
 void loop() 
 {
   delay(FRAME_SPEED);
+
+  printState();
   
   int selector_pos = getSelectorGearPosition();
-  if (selector_pos == -2)
-  {
-    sendCastleErrorMessage();
-    return;
-  }
-  else if (selector_pos == -1)
-  {
-    // we haven't made it to a new position yet, do nothing.
-    return;
-  }
 
   // LE GRAND STATE MACHINE
   // NOTE: with some exceptions the state machine falls through: if we advance
@@ -139,7 +131,11 @@ void loop()
   if (state == 0)
   {
     setCalibration(false);
-    if (selector_pos == 0 && buttonPressed())
+    if (selector_pos < 0)
+    {
+      return;
+    }
+    else if (selector_pos == 0 && buttonPressed())
     {
       // We have started calibrating!
       state = 1;
@@ -158,14 +154,14 @@ void loop()
   if (state == 1)
   {
     blinkCalibration();
-    if (selector_pos < last_selector_pos
-        || selector_pos > last_selector_pos + 1)
+    if (selector_pos >= 0 && (selector_pos < last_selector_pos
+        || selector_pos > last_selector_pos + 1))
     {
       // They have gone backwards or too fast.
       state = 0;
       resetLights();
     }
-    else
+    else if (selector_pos >= 0)
     {
       // Fill in new photoresistor states.
       for (int i=0; i<3; i++)
@@ -173,58 +169,63 @@ void loop()
         photoresistor_totals[i][selector_pos] += getRawPhotoresistor(i);
         photoresistor_counts[i][selector_pos]++;
       }
-
-      // If we are at the end, move on to state 2.
-      if (selector_pos == 6)
+    }
+    // If we are at the end, move on to state 2.
+    else if (selector_pos < 0 && last_selector_pos == 6)
+    {
+      // This fills in gear_types and gear_orientations.
+      // We check that it passes each time, and that
+      // we see one of each gear type.
+      int failed = false;
+      int types_seen = 0;
+      for (int i=0; i<3; i++)
       {
-        state = 2;
-        // This fills in gear_types and gear_orientations.
-        // We check that it passes each time, and that
-        // we see one of each gear type.
-        int failed = false;
-        int types_seen = 0;
-        for (int i=0; i<3; i++)
-        {
-          if (!computeGearPosition(i))
-          {
-            failed = true;
-            printGearRead(i, true);
-          }
-          else
-          {
-            types_seen |= 1 << gear_types[i];
-            printGearRead(i, false);
-          }
-        }
-
-        if (types_seen != 7)
+        if (!computeGearPosition(i))
         {
           failed = true;
-        }
-
-
-        if (failed)
-        {
-          state = 0;
-          resetLights();
+          printGearRead(i, true);
         }
         else
         {
-          for (int i=0; i<7; i++)
-          {
-            correct_positions[i] = false;
-          }
+          types_seen |= 1 << gear_types[i];
+          printGearRead(i, false);
         }
       }
+
+      if (types_seen != 7)
+      {
+        failed = true;
+      }
+
+
+      if (failed)
+      {
+        state = 0;
+        resetLights();
+      }
+      else
+      {
+        state = 2;
+        for (int i=0; i<7; i++)
+        {
+          correct_positions[i] = false;
+        }
+      }
+    }
+    else
+    {
+      return;
+
     }
   }
 
   if (state == 2)
   {
     setCalibration(true);
-    if (selector_pos > last_selector_pos
-        || selector_pos < last_selector_pos - 1)
+    if (selector_pos >= 0 && (selector_pos > last_selector_pos
+        || selector_pos < last_selector_pos - 1))
     {
+      Serial.println("RESET");
       // They have gone backwards or too fast.
       state = 0;
       resetLights();
@@ -237,27 +238,31 @@ void loop()
       {
         showCorrect(selector_pos);
       }
-
-      if (selector_pos == 0)
+    }
+    else if (last_selector_pos == 0)
+    {
+      // If we are back to the beginning, and have won, yay!
+      boolean winning = true;
+      for (int i=0; i<7; i++)
       {
-        // If we are back to the beginning, and have won, yay!
-        boolean winning = true;
-        for (int i=0; i<7; i++)
+        if (!correct_positions[i])
         {
-          if (!correct_positions[i])
-          {
-            winning = false;
-            break;
-          }
-        }
-
-        if (winning)
-        {
-          state = 3;
-          winning_blink_state = 0;
-          sendCastleSuccessMessage();
+          winning = false;
+          break;
         }
       }
+
+      if (winning)
+      {
+        state = 3;
+        winning_blink_state = 0;
+        sendCastleSuccessMessage();
+      }
+    
+    }
+    else if (selector_pos < 0)
+    {
+      return;
     }
   }
 
@@ -273,6 +278,7 @@ void loop()
     {
       blinkWinningLights();
     }
+    return;
   }
 
   last_selector_pos = selector_pos;
@@ -290,7 +296,7 @@ boolean computeGearPosition(int i)
   // Hold on tight; this is kinda bespoke and messy.
 
   // First, figure out what, on average, we saw.
-  int photoresistor_history[7];
+  boolean photoresistor_history[7];
   int positions_white = 0;
   for (int j=0; j<7; j++)
   {
@@ -299,7 +305,8 @@ boolean computeGearPosition(int i)
     // apart, set a dynamic threshold halfway between.
     photoresistor_history[j] = (
       photoresistor_totals[i][j] / photoresistor_counts[i][j]
-      < photoresistor_thresholds[i]);
+      > photoresistor_thresholds[i]);
+    Serial.print(photoresistor_history[j]);
 
     positions_white += photoresistor_history[j];
   }
@@ -613,16 +620,16 @@ void printState()
   {
     // print out position of the pot
     Serial.print("pot: ");
-    Serial.println(getSelectorGearPosition());
+    Serial.print(getSelectorGearPosition());
+    Serial.print(" (");
+    Serial.print(analogRead(pot));
+    Serial.println(")");
     // print out the three photoresistors.
     Serial.print("photoresistors:");
     for (int i=0; i<3; i++)
     {
       Serial.print(" ");
       Serial.print(getRawPhotoresistor(i));
-      Serial.print(" (");
-      Serial.print(analogRead(photoresistors[i]));
-      Serial.print(")");
     }
     Serial.println("");
     
@@ -677,12 +684,14 @@ void printGearRead(int i, boolean failed)
       Serial.print("history ");
       Serial.print(i);
       Serial.print(":");
-      for (int j=0; j<=last_selector_pos; j++)
+      for (int j=0; j<7; j++)
       {
         Serial.print(" ");
         Serial.print(photoresistor_totals[i][j]);
         Serial.print("/");
         Serial.print(photoresistor_counts[i][j]);
+        Serial.print("=");
+        Serial.print(photoresistor_totals[i][j] / photoresistor_counts[i][j]);
       }
       Serial.println("");
     }
