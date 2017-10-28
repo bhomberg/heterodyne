@@ -1,3 +1,5 @@
+#include <Servo.h>
+
 // PIN NUMBERS
 int output_lights[7] = {38, 39, 40, 41, 42, 43, 44};
 
@@ -8,6 +10,10 @@ int calibration_light = 31;
 int pot = A0;
 
 int photoresistors[3] = {A1, A2, A3};
+
+Servo servo;
+int servo_in = 10;
+int servo_power = 12;
 
 // CALIBRATION
 
@@ -73,6 +79,8 @@ int calibration_blink_state = -1;
 int winning_blink_state = -1;
 int debug_state = 0;
 
+int button_state = 0;
+
 // CONSTANTS DEFINING THE PUZZLE
 
 // Structure of the gears, represented as pairs that are connected.
@@ -98,7 +106,7 @@ int FRAME_SPEED = 10; // 100 fps
 // How many frames to wait before toggling blinking lights
 int BLINK_SPEED = 50; // 0.5s
 // How many frames to wait before logging debug data, or 0 for never
-int DEBUG_FREQ = 100; // 1s
+int DEBUG_FREQ = 200; // 2s
 
 // MAIN TOPLEVEL STUFF
 
@@ -113,6 +121,10 @@ void setup()
     pinMode(output_lights[i], OUTPUT);
     digitalWrite(output_lights[i], LOW);
   }
+
+  pinMode(servo_power, OUTPUT);
+  digitalWrite(servo_power, HIGH);
+  servo.attach(servo_in);
 
 }
 
@@ -256,6 +268,7 @@ void loop()
       {
         state = 3;
         winning_blink_state = 0;
+        servo.write(180);
         sendCastleSuccessMessage();
       }
     
@@ -273,6 +286,7 @@ void loop()
       state = 0;
       winning_blink_state = -1;
       resetLights();
+      servo.write(0);
     }
     else
     {
@@ -533,8 +547,6 @@ void showCorrect(int n)
 {
   // turn on light
   digitalWrite(output_lights[n], HIGH);
-  
-  // TODO(bhomberg): open solenoid??
 }
 
 // Reset all the lights.  (Caller should reset internal state.)
@@ -546,7 +558,6 @@ void resetLights()
     digitalWrite(output_lights[i], LOW);
   }
 
-  // TODO(bhomberg): close all solenoids (??)
   digitalWrite(calibration_light, LOW);
 }
 
@@ -738,5 +749,12 @@ int getSelectorGearPosition()
 // True if the button is pressed.
 boolean buttonPressed()
 {
-  return digitalRead(red_button);
+  int val = digitalRead(red_button);
+  boolean ret = (button_state != val);
+  if (DEBUG_FREQ > 0 && ret)
+  {
+    Serial.println("BUTTON PRESSED");
+  }
+  button_state = val;
+  return ret;
 }
