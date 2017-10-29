@@ -13,23 +13,25 @@ int photoresistors[3] = {A1, A2, A3};
 
 Servo servo;
 int servo_in = 10;
-int servo_power = 12;
 
 // CALIBRATION
 
 // if the potentiometer is between pot_locs[2*i] and pod_locs[2*i+1], then we 
 // say we are in position i.  otherwise, we are between positions.
 // TODO(benkraft): Consider narrowing these.
-int pot_locs[14] = {1024, 885,
-                    825, 690,
-                    640, 450,
-                    390, 280,
-                    190, 70,
-                    50, 24,
-                    12, 5};
+int pot_locs[14] = {1024, 940,
+                    880, 820,
+                    680, 600,
+                    440, 360,
+                    240, 160,
+                    90, 40,
+                    30, 10};
 
 // above this = white; below = black (unlodged is undefined)
-int photoresistor_thresholds[3] = {90, 50, 70};
+int photoresistor_thresholds[3] = {70, 70, 70};
+
+int servo_open = 0;
+int servo_closed = 180;
 
 // STATE OF THE WORLD
 
@@ -106,7 +108,7 @@ int FRAME_SPEED = 10; // 100 fps
 // How many frames to wait before toggling blinking lights
 int BLINK_SPEED = 50; // 0.5s
 // How many frames to wait before logging debug data, or 0 for never
-int DEBUG_FREQ = 200; // 2s
+int DEBUG_FREQ = 3000; // 2s
 
 // MAIN TOPLEVEL STUFF
 
@@ -122,10 +124,13 @@ void setup()
     digitalWrite(output_lights[i], LOW);
   }
 
-  pinMode(servo_power, OUTPUT);
-  digitalWrite(servo_power, HIGH);
   servo.attach(servo_in);
 
+  // make sure the button is in the right state
+  buttonPressed();
+  buttonPressed();
+
+  servo.write(servo_closed);
 }
 
 // this is run continuously after setup has completed
@@ -183,7 +188,7 @@ void loop()
       }
     }
     // If we are at the end, move on to state 2.
-    else if (selector_pos < 0 && last_selector_pos == 6)
+    else if (selector_pos < 0 && last_selector_pos == 6 && photoresistor_counts[0][6] > 5)
     {
       // This fills in gear_types and gear_orientations.
       // We check that it passes each time, and that
@@ -234,26 +239,25 @@ void loop()
   if (state == 2)
   {
     setCalibration(true);
-    if (selector_pos >= 0 && (selector_pos > last_selector_pos
-        || selector_pos < last_selector_pos - 1))
+    if (buttonPressed())
     {
-      Serial.println("RESET");
-      // They have gone backwards or too fast.
+      // Button resets.
       state = 0;
       resetLights();
     }
-    else if (selector_pos == last_selector_pos - 1)
+    else if (selector_pos >= 0)
     {
       // Fill in new connection states.
+      // Usually a noop.
       correct_positions[selector_pos] = haveConnection(selector_pos);
       if (correct_positions[selector_pos])
       {
         showCorrect(selector_pos);
       }
     }
-    else if (last_selector_pos == 0)
+    if (last_selector_pos == 0 || selector_pos == 0)
     {
-      // If we are back to the beginning, and have won, yay!
+      // Back to the beginning
       boolean winning = true;
       for (int i=0; i<7; i++)
       {
@@ -268,12 +272,11 @@ void loop()
       {
         state = 3;
         winning_blink_state = 0;
-        servo.write(180);
+        servo.write(servo_open);
         sendCastleSuccessMessage();
       }
-    
     }
-    else if (selector_pos < 0)
+    if (state != 3 && selector_pos < 0)
     {
       return;
     }
@@ -286,7 +289,7 @@ void loop()
       state = 0;
       winning_blink_state = -1;
       resetLights();
-      servo.write(0);
+      servo.write(servo_closed);
     }
     else
     {
@@ -312,15 +315,24 @@ boolean computeGearPosition(int i)
   // First, figure out what, on average, we saw.
   boolean photoresistor_history[7];
   int positions_white = 0;
+  int k;
   for (int j=0; j<7; j++)
   {
+    if (i == 1)
+    {
+      // reads are reversed!
+      k = 6 - j;
+    }
+    else
+    {
+      k = j;
+    }
     // TODO(benkraft): If ambient light variation is an issue, we could compute
     // the largest and smallest values we saw, and if they are far enough
     // apart, set a dynamic threshold halfway between.
     photoresistor_history[j] = (
-      photoresistor_totals[i][j] / photoresistor_counts[i][j]
+      photoresistor_totals[i][k] / photoresistor_counts[i][k]
       > photoresistor_thresholds[i]);
-    Serial.print(photoresistor_history[j]);
 
     positions_white += photoresistor_history[j];
   }
@@ -332,12 +344,12 @@ boolean computeGearPosition(int i)
     gear_types[i] = 1;
     if (photoresistor_history[1] && photoresistor_history[4])
     {
-      gear_orientations[i] = 1;
+      gear_orientations[i] = 2;
       return true;
     }
     else if (photoresistor_history[2] && photoresistor_history[5])
     {
-      gear_orientations[i] = 2;
+      gear_orientations[i] = 1;
       return true;
     }
     else
@@ -519,7 +531,7 @@ boolean haveConnection(int rotation)
     for (int j = 2; j<5; j++)
     {
       if (first_connections[(12 - i) % 3] && positionsConnected(
-            gear_types[0], (rotation_0 + i) % 12, (rotation_0 + j) % 12))
+            gear_types[1], (rotation_1 + i) % 12, (rotation_1 + j) % 12))
       {
         second_connections[j - 2] = true;
       }
@@ -527,10 +539,10 @@ boolean haveConnection(int rotation)
   }
   for (int i = 8; i<11; i++)
   {
-    for (int j = 0; j<2; j++)
+    for (int j = 0; j<3; j++)
     {
       if (second_connections[i % 3] && positionsConnected(
-            gear_types[0], (rotation_0 + i) % 12, (rotation_0 + j) % 12))
+            gear_types[2], (rotation_2 + i) % 12, (rotation_2 + j) % 12))
       {
         return true;
       }
@@ -649,21 +661,7 @@ void printState()
     Serial.print("last selector pos: ");
     Serial.println(last_selector_pos);
 
-    // history gets printed when we finish it
-
-    if (state == 2)
-    {
-      for (int i=0; i<3; i++)
-      {
-        Serial.print("gear ");
-        Serial.print(i);
-        Serial.print("type: ");
-        Serial.print(gear_types[i]);
-        Serial.print(", orientation: ");
-        Serial.print(gear_orientations[i]);
-        Serial.println("");
-      }
-    }
+    // history/gears/correctness gets printed when we finish it
     
     Serial.println("");
   }
@@ -703,6 +701,16 @@ void printGearRead(int i, boolean failed)
         Serial.print(photoresistor_counts[i][j]);
         Serial.print("=");
         Serial.print(photoresistor_totals[i][j] / photoresistor_counts[i][j]);
+      }
+      Serial.println("");
+    }
+    if (i == 2)
+    {
+      Serial.print("correct: ");
+      for (int i=0; i<7; i++)
+      {
+        Serial.print(haveConnection(i));
+        Serial.print(" ");
       }
       Serial.println("");
     }
