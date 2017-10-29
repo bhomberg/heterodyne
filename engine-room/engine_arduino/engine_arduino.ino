@@ -88,9 +88,9 @@ int getSwitchValue(int row, int col) {
   if (switch_pin == NO) {
     return SWITCH_WALL;
   } else if (digitalRead(switch_pin)) {
-    return SWITCH_ON;
-  } else {
     return SWITCH_OFF;
+  } else {
+    return SWITCH_ON;
   }
 }
 
@@ -309,7 +309,7 @@ void setup() {
   }
   pinMode(LED_BUILTIN, OUTPUT);
 
-  pinMode(22, INPUT);
+  pinMode(22, INPUT_PULLUP);
   // Initial switch pins as INPUTs.
 //  for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
 //    int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
@@ -333,39 +333,54 @@ void setup() {
 //  delay(100);
 //}
 
+void loop() {
+  if (USE_SERIAL) {
+    Serial.println("DEBUG");
+  }
+  for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
+    int value = getSwitchValue(getRow(index), getCol(index));
+    if (index % GRIDSIZE == 0) {
+      if (USE_SERIAL) {
+        Serial.println("");
+      }
+    }
+    if (value == SWITCH_WALL) {    
+      if (USE_SERIAL) {
+        Serial.print("X");
+      }
+    } else {
+      if (USE_SERIAL) {
+        Serial.print(value);
+      }
+    }
+    
+    if (USE_SERIAL) {
+      Serial.print(' ');
+    }
+  }
+
+  if (USE_SERIAL) {
+    Serial.print('\n');
+    Serial.print('\n');
+    Serial.flush();
+  }
+
+  delay(1000);
+}
+
 //void loop() {
-//  if (USE_SERIAL) {
-//    Serial.println("DEBUG");
+//  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
+//  {
+//    colors[i] = CYAN;
 //  }
-//  for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
-//    int value = getSwitchValue(getRow(index), getCol(index));
-//    if (index % GRIDSIZE == 0) {
-//      if (USE_SERIAL) {
-//        Serial.println("");
-//      }
-//    }
-//    if (value == SWITCH_WALL) {    
-//      if (USE_SERIAL) {
-//        Serial.print("X");
-//      }
-//    } else {
-//      if (USE_SERIAL) {
-//        Serial.print(value);
-//      }
-//    }
-//    
-//    if (USE_SERIAL) {
-//      Serial.print(' ');
-//    }
+//  if (true) { //digitalRead(22)) {
+//    setColor(3, 3, GREEN);
 //  }
-//
-//  if (USE_SERIAL) {
-//    Serial.print('\n');
-//    Serial.print('\n');
-//    Serial.flush();
+//  else {
+//    setColor(3, 3, GREEN);  
 //  }
-//
-//  delay(1000);
+//  leds.write(colors, STRIP_LENGTH);
+//  delay(50);
 //}
 
 //void loop() {
@@ -394,20 +409,12 @@ void setup() {
 //  delay(10);
 //}
 
-void loop() {
-  bool victory = update();
-  leds.write(colors, STRIP_LENGTH);
-  delay(50);
-
 //void loop() {
-//  delay(10);
+//  bool victory = update();
+//  if (victory) {
+//    delay(500);
+//    setAllBlue();
+//  }
+//  delay(50);
+//  leds.write(colors, STRIP_LENGTH);
 //}
-//
-
-void loop() {
-  bool victory = update();
-  if (victory) {
-    delay(500);
-    setAllBlue();
-  }
-}
