@@ -14,11 +14,20 @@
 #define YELLOW rgb_color(255, 255, 0)
 #define OFF rgb_color(0, 0, 0)
 
+#define ORANGE rgb_color(143, 255, 0)
+#define CYAN rgb_color(255, 0, 255)
+
 // TODO(bhomberg): update pin numbers
 // LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 PololuLedStrip<2> leds;
 rgb_color colors[STRIP_LENGTH];
+
+bool isVictorious = false;
+bool isHot = false;
+bool isBad = false;
+bool isEmpty = false;
+int badAttempts = 0;
 
 #define SWITCH_ON 1
 #define SWITCH_OFF 2
@@ -162,15 +171,41 @@ void setAllBlue() {
   }
 }
 
+void sendStartMessage() {
+  if (USE_SERIAL) {
+    Serial.println(10);  // Send start audio signal.
+  }
+}
+
 void sendRedLightsMessage() {
   if (USE_SERIAL) {
-    Serial.println(10);  // Send "Ahhhhhh!" audio signal.
+    if (!isHot) {
+      Serial.println(11);  // Send "Ahhhhhh!" audio signal.
+    }
+  }
+}
+
+void stopHotMessage() {
+  if (USE_SERIAL) {
+    Serial.println(19);  // Stop Ahhh!
   }
 }
 
 void sendBadLightsMessage() {
   if (USE_SERIAL) {
-    Serial.println(11);  // Send "I don't like the lights." audio signal.
+    if (badAttempts == 1) {
+      Serial.println(12);  // Send "I don't like the lights." audio signal.
+    } else if (badAttempts == 2) {
+      Serial.println(13);  // Send "I don't like the lights." audio signal.      
+    } else {
+      Serial.println(14);  // Send "I don't like the lights." audio signal.      
+    }
+  }
+}
+
+void sendVictoryMessage() {
+  if (USE_SERIAL) {
+    Serial.println(15);  // Send win message.
   }
 }
 
@@ -178,12 +213,14 @@ bool update() {
   bool anyInvalid = false;
   bool anyEmpty = false;
   bool anyWallConstrainsViolated = false;
+  int switchesOn = 0;
   for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
     int row = getRow(index);
     int col = getCol(index);
     if (isWall(row, col)) {
       continue;
     } else if (isSwitchOn(row, col)) {
+      switchesOn++;
       if (illuminationCount(row, col) > 1) {
         anyInvalid = true;
         setColor(row, col, RED);  // Conflicting lights.
@@ -207,14 +244,34 @@ bool update() {
       }
     }
   }
+
+  if (switchesOn == 0) {
+    badAttempts = 0;
+  }
+  if (isEmpty && switchesOn == 1) {
+    sendStartMessage();
+  }
+  isEmpty = (switchesOn == 0);
   
   bool victory = !anyInvalid && !anyEmpty && !anyWallConstrainsViolated;
 
   if (!anyEmpty && !victory) { // Board is full but incorrect.
-    sendBadLightsMessage();  // Send "I don't like the lights." audio signal.
+    if (!isBad) { // just got to bad state
+      badAttempts++;
+      sendBadLightsMessage();  // Send "I don't like the lights." audio signal.
+    }
   }
+  if (victory && !isVictorious) {
+    // We've gone from a non-winning state to a winning state.
+    sendVictoryMessage();
+  }
+  isVictorious = victory;
 
-  
+  if (isHot && !anyInvalid) { // was hot, now fixed.
+    stopHotMessage();
+  }
+  isBad = !anyEmpty && !victory;
+  isHot = anyInvalid;
   return victory;
 }
 
@@ -241,18 +298,25 @@ rgb_color getOff() {
 
 // Arduino setup() and loop()
 void setup() {
+  isVictorious = false;
+  isHot = false;
+  isBad = false;
+  isEmpty = false;
+  badAttempts = 0;
+  
   if (USE_SERIAL) {
     Serial.begin(9600);
   }
-  // pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
+  pinMode(22, INPUT);
   // Initial switch pins as INPUTs.
-  for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
-    int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
-    if (pin != NO) {
-      pinMode(pin, INPUT);      
-    }
-  }
+//  for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
+//    int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
+//    if (pin != NO) {
+//      pinMode(pin, INPUT);      
+//    }
+//  }
   
   // PololuLedStripBase::interruptFriendly = true;
 
@@ -307,6 +371,21 @@ void setup() {
 //void loop() {
 //  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
 //  {
+//    colors[i] = CYAN;
+//  }
+//  if (digitalRead(22)) {
+//    setColor(3, 3, GREEN);
+//  }
+//  else {
+//    setColor(3, 3, GREEN);  
+//  }
+//  leds.write(colors, STRIP_LENGTH);
+//  delay(50);
+//}
+
+//void loop() {
+//  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
+//  {
 //    colors[i] = OFF;
 //  }
 //  setColor(3, 3, BLUE);
@@ -330,12 +409,18 @@ void setup() {
 //  delay(10);
 //}
 
+//void loop() {
+//  delay(10);
+//}
+//
+
 void loop() {
   bool victory = update();
-  leds.write(colors, STRIP_LENGTH);
-  delay(50);
   if (victory) {
     delay(500);
     setAllBlue();
   }
+  delay(50);
+  leds.write(colors, STRIP_LENGTH);
 }
+
