@@ -35,12 +35,12 @@ int badAttempts = 0;
 
 #define NO 98  // Represents no pin
 const uint16_t SWITCH_PINS[] = {
-  13, 26,  9, 10, 48, NO, 32,
+  12, 26,  9, 11, 18, NO, 32,
   NO, 17, 16, NO, 47, 50, 34,
    7,  6, 15,  8, 46, 51, 36,
   28, NO, 30, 22, 45, NO, 35,
-  25, 37, 39, 41, 42, 44, 33,
-  24, 27, 29, NO, 43, 52, NO,
+  23, 37, 39, 41, 42, 44, 33,
+  24, 19, 29, NO, 43, 52, NO,
   25, NO, 31, 38, 40, 49, 53,
 };
 
@@ -333,40 +333,40 @@ void setup() {
 //  delay(100);
 //}
 
-void loop() {
-  if (USE_SERIAL) {
-    Serial.println("DEBUG");
-  }
-  for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
-    int value = getSwitchValue(getRow(index), getCol(index));
-    if (index % GRIDSIZE == 0) {
-      if (USE_SERIAL) {
-        Serial.println("");
-      }
-    }
-    if (value == SWITCH_WALL) {    
-      if (USE_SERIAL) {
-        Serial.print("X");
-      }
-    } else {
-      if (USE_SERIAL) {
-        Serial.print(value);
-      }
-    }
-    
-    if (USE_SERIAL) {
-      Serial.print(' ');
-    }
-  }
-
-  if (USE_SERIAL) {
-    Serial.print('\n');
-    Serial.print('\n');
-    Serial.flush();
-  }
-
-  delay(1000);
-}
+//void loop() {
+//  if (USE_SERIAL) {
+//    Serial.println("DEBUG");
+//  }
+//  for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
+//    int value = getSwitchValue(getRow(index), getCol(index));
+//    if (index % GRIDSIZE == 0) {
+//      if (USE_SERIAL) {
+//        Serial.println("");
+//      }
+//    }
+//    if (value == SWITCH_WALL) {    
+//      if (USE_SERIAL) {
+//        Serial.print("X");
+//      }
+//    } else {
+//      if (USE_SERIAL) {
+//        Serial.print(value);
+//      }
+//    }
+//    
+//    if (USE_SERIAL) {
+//      Serial.print(' ');
+//    }
+//  }
+//
+//  if (USE_SERIAL) {
+//    Serial.print('\n');
+//    Serial.print('\n');
+//    Serial.flush();
+//  }
+//
+//  delay(1000);
+//}
 
 //void loop() {
 //  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
@@ -409,12 +409,12 @@ void loop() {
 //  delay(10);
 //}
 
-//void loop() {
-//  bool victory = update();
-//  if (victory) {
-//    delay(500);
-//    setAllBlue();
-//  }
-//  delay(50);
-//  leds.write(colors, STRIP_LENGTH);
-//}
+void loop() {
+  bool victory = update();
+  if (victory) {
+    delay(500);
+    setAllBlue();
+  }
+  delay(50);
+  leds.write(colors, STRIP_LENGTH);
+}
