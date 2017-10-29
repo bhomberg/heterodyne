@@ -72,7 +72,7 @@ print('Arduinos initialized')
 
 ## VARIABLES ##
 # variables for timekeeping
-max_time = 30*60 # 30 min * 60 s / min
+max_time = 23*60 # 30 min * 60 s / min
 timekeeping = [False, False, False, False]
 timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
 timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
@@ -86,12 +86,11 @@ gearsound = ["sound_bites/sendinghelp.wav", "sound_bites/goodbyefriends.wav"]
 # variables for operator sounds
 # todo -- limit switches for doompart2 (moving room locks) and
 # enigmaticmechanism (unlock moving room)
-operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav", "sound_bites/donttouchnotpuzzle.wav", "sound_bites/doompart2.wav", "sound_bites/enigmaticmechanism.wav"]
+operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/fancyhat.wav", "sound_bites/donttouchnotpuzzle.wav", "sound_bites/inventive.wav", "sound_bites/torture.wav"]
 
 # intro/outro sounds
-intro = "sound_bites/foolishcreaturesblastdoorsselfdestruct.wav"
-intro2 = "sound_bites/diehorribly30take2good.wav"
-outro = "sound_bites/selfdestructcomplete.wav"
+intro = "sound_bites/selfdestructstart.wav"
+outro = "sound_bites/selfdestructend.wav"
 
 
 # operator loop
@@ -112,9 +111,6 @@ while(True):
   # play intro
   s = time()
   w = sa.WaveObject.from_wave_file(intro)
-  p = w.play()
-  p.wait_done()
-  w = sa.WaveObject.from_wave_file(intro2)
   p = w.play()
   p.wait_done()
   p = None
