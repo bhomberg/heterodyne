@@ -26,13 +26,13 @@ rgb_color colors[STRIP_LENGTH];
 
 #define NO 98  // Represents no pin
 const uint16_t SWITCH_PINS[] = {
-  13,  6, 30,  9, 36, NO, 38,
-  NO,  7, 28, NO, 10, 32, 37,
-   8, 19, 18, 17, 16, 15, 14,
-  26, NO, 23, 22, 50, NO, 42,
-  40, 29, 25, 27, 51, 46, 44,
-  31, 33, 43, NO, 49, 48, NO,
-  39, NO, 35, 45, 47, 53, 34,
+  13, 26,  9, 10, 48, NO, 32,
+  NO, 17, 16, NO, 47, 50, 34,
+   7,  6, 15,  8, 46, 51, 36,
+  28, NO, 30, 22, 45, NO, 35,
+  25, 37, 39, 41, 42, 44, 33,
+  24, 27, 29, NO, 43, 52, NO,
+  25, NO, 31, 38, 40, 49, 53,
 };
 
 const uint16_t LED_INDEXES[] = {
@@ -261,91 +261,81 @@ void setup() {
 }
 
 //void loop() {
-//  if (DEBUG_FLAG) {
-//    if (USE_SERIAL) {
-//      Serial.println("DEBUG");
-//    }
-//    for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
-//      int value = getSwitchValue(getRow(index), getCol(index));
-//      if (index % GRIDSIZE == 0) {
-//        if (USE_SERIAL) {
-//          Serial.println("");
-//        }
-//      }
-//      if (value == SWITCH_WALL) {    
-//        if (USE_SERIAL) {
-//          Serial.print("X");
-//        }
-//      } else {
-//        if (USE_SERIAL) {
-//          Serial.print(value);
-//        }
-//      }
-//      
+//  Serial.println("DEBUG");
+//  for (int pin = 2; pin <= 53; pin++) {
+//    Serial.print(digitalRead(pin));
+//    Serial.print(" ");
+//  }
+//  delay(100);
+//}
+
+//void loop() {
+//  if (USE_SERIAL) {
+//    Serial.println("DEBUG");
+//  }
+//  for (int index = 0; index < GRIDSIZE * GRIDSIZE; index++) {
+//    int value = getSwitchValue(getRow(index), getCol(index));
+//    if (index % GRIDSIZE == 0) {
 //      if (USE_SERIAL) {
-//        Serial.print(' ');
+//        Serial.println("");
 //      }
 //    }
-//
-//    if (USE_SERIAL) {
-//      Serial.print('\n');
-//      Serial.print('\n');
-//      Serial.flush();
-//    }
-////
-//    if (isSwitchOn(3, 3)) {
-//      //Serial.println("YES");
-//      setColor(3, 3, RED);
+//    if (value == SWITCH_WALL) {    
+//      if (USE_SERIAL) {
+//        Serial.print("X");
+//      }
 //    } else {
-//      //Serial.println("NO");
-//      setColor(3, 3, BLUE);
+//      if (USE_SERIAL) {
+//        Serial.print(value);
+//      }
 //    }
-//    leds.write(colors, STRIP_LENGTH);
-//    delay(50);
-//  } else {
-//    bool victory = update();
-//    // leds.write(colors, STRIP_LENGTH);
-//    if (victory) {
-//      delay(500);
-//      setAllBlue();
+//    
+//    if (USE_SERIAL) {
+//      Serial.print(' ');
 //    }
+//  }
+//
+//  if (USE_SERIAL) {
+//    Serial.print('\n');
+//    Serial.print('\n');
+//    Serial.flush();
 //  }
 //
 //  delay(1000);
 //}
 
-void loop() {
-  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
-  {
-    colors[i] = OFF;
-  }
-  setColor(3, 3, BLUE);
-  setColor(3, 2, GREEN);
-  setColor(3, 0, RED);
-  setColor(3, 4, YELLOW);
-  setColor(3, 6, OFF);
-  setColor(0, 0, OFF);
-  setColor(0, 3, GREEN);
-  //  1. You must disconnect 5V to upload properly.
-  //  2. Why does the following not work?
-//  if (isSwitchOn(3, 3)) {
-//    setColor(4, 3, GREEN);
-//  } else {
-//    setColor(4, 3, RED);
-//  }
-  setColor(0, 3, BLUE);
-  setColor(4, 3, YELLOW);
-//  isSwitchOn(3, 3);
-  leds.write(colors, STRIP_LENGTH);
-  delay(10);
-}
-
 //void loop() {
-//  bool victory = update();
-//  leds.write(colors, STRIP_LENGTH);
-//  delay(50);
-//  if (victory) {
-//    delay(500);
-//    setAllBlue();
+//  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
+//  {
+//    colors[i] = OFF;
 //  }
+//  setColor(3, 3, BLUE);
+//  setColor(3, 2, GREEN);
+//  setColor(3, 0, RED);
+//  setColor(3, 4, YELLOW);
+//  setColor(3, 6, OFF);
+//  setColor(0, 0, OFF);
+//  setColor(0, 3, GREEN);
+//  //  1. You must disconnect 5V to upload properly.
+//  //  2. Why does the following not work?
+////  if (isSwitchOn(3, 3)) {
+////    setColor(4, 3, GREEN);
+////  } else {
+////    setColor(4, 3, RED);
+////  }
+//  setColor(0, 3, BLUE);
+//  setColor(4, 3, YELLOW);
+////  isSwitchOn(3, 3);
+//  leds.write(colors, STRIP_LENGTH);
+//  delay(10);
 //}
+
+void loop() {
+  bool victory = update();
+  leds.write(colors, STRIP_LENGTH);
+  delay(50);
+  if (victory) {
+    delay(500);
+    setAllBlue();
+  }
+}
