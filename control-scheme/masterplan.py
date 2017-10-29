@@ -7,7 +7,7 @@ import simpleaudio as sa
 baud_rate = 9600
 arduino_ports = {
     'engine-room' : None, #'/dev/ttyACM1',
-    'crypt-gears' : '/dev/ttyACM0',
+    'crypt-gears' : None, #'/dev/ttyACM0',
     'operator' : '/dev/ttyUSB0',
     }
 arduinos = dict([(name, None) for name in arduino_ports])
@@ -72,7 +72,7 @@ print('Arduinos initialized')
 
 ## VARIABLES ##
 # variables for timekeeping
-max_time = 20*60 # 20 min * 60 s / min
+max_time = 30*60 # 30 min * 60 s / min
 timekeeping = [False, False, False, False]
 timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
 timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
@@ -90,7 +90,7 @@ operatorsound = ["sound_bites/won_tsolveanything.wav", "sound_bites/ticklish.wav
 
 # intro/outro sounds
 intro = "sound_bites/foolishcreaturesblastdoorsselfdestruct.wav"
-intro2 = "sound_bites/diehorribly20.wav"
+intro2 = "sound_bites/diehorribly30take2good.wav"
 outro = "sound_bites/selfdestructcomplete.wav"
 
 
@@ -99,9 +99,15 @@ outro = "sound_bites/selfdestructcomplete.wav"
 # should be restarted instead
 while(True):
   start = input("Press any key to start.")
+
+  for arduino_name in received_messages:
+      m = get_message(arduino_name)
+
   done = False
   doom2 = False
   enigma = False
+
+  timekeeping = [False, False, False, False]
 
   # play intro
   s = time()
@@ -117,7 +123,7 @@ while(True):
 
   while(time() - s < max_time and not done):
     if c % 100 == 0:
-        print("time: ", time() - s)
+        print("time: ", (time() - s)/60)
     sleep(.01)
     c+=1
 

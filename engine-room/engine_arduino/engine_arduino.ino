@@ -5,7 +5,7 @@
 #define GRIDSIZE 7
 
 #define DEBUG_FLAG true
-#define USE_SERIAL false
+#define USE_SERIAL true
 
 // GRB color order... 
 #define RED rgb_color(0, 255, 0)
@@ -244,7 +244,7 @@ void setup() {
   if (USE_SERIAL) {
     Serial.begin(9600);
   }
-  // pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
   // Initial switch pins as INPUTs.
   for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
@@ -314,38 +314,42 @@ void setup() {
 //  delay(1000);
 //}
 
-void loop() {
-  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
-  {
-    colors[i] = OFF;
-  }
-  setColor(3, 3, BLUE);
-  setColor(3, 2, GREEN);
-  setColor(3, 0, RED);
-  setColor(3, 4, YELLOW);
-  setColor(3, 6, OFF);
-  setColor(0, 0, OFF);
-  setColor(0, 3, GREEN);
-  //  1. You must disconnect 5V to upload properly.
-  //  2. Why does the following not work?
+//void loop() {
+//  for(uint16_t i = 0; i < STRIP_LENGTH; i++)
+//  {
+//    colors[i] = OFF;
+//  }
+//  setColor(3, 3, BLUE);
+//  setColor(3, 2, GREEN);
+//  setColor(3, 0, RED);
+//  setColor(3, 4, YELLOW);
+//  setColor(3, 6, OFF);
+//  setColor(0, 0, OFF);
+//  setColor(0, 3, GREEN);
+//  //  1. You must disconnect 5V to upload properly.
+//  //  2. Why does the following not work?
 //  if (isSwitchOn(3, 3)) {
 //    setColor(4, 3, GREEN);
 //  } else {
 //    setColor(4, 3, RED);
 //  }
-  setColor(0, 3, BLUE);
-  setColor(4, 3, YELLOW);
-//  isSwitchOn(3, 3);
+//  setColor(0, 3, BLUE);
+//  // setColor(4, 3, YELLOW);
+////  isSwitchOn(3, 3);
+//  leds.write(colors, STRIP_LENGTH);
+//  delay(10);
+//}
+<<<<<<< Updated upstream
+=======
+
+void loop() {
+  bool victory = update();
   leds.write(colors, STRIP_LENGTH);
-  delay(10);
+  delay(50);
+  if (victory) {
+    delay(500);
+    setAllBlue();
+  }
 }
 
-//void loop() {
-//  bool victory = update();
-//  leds.write(colors, STRIP_LENGTH);
-//  delay(50);
-//  if (victory) {
-//    delay(500);
-//    setAllBlue();
-//  }
-//}
+>>>>>>> Stashed changes

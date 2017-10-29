@@ -28,7 +28,7 @@ int pot_locs[14] = {1024, 940,
                     30, 10};
 
 // above this = white; below = black (unlodged is undefined)
-int photoresistor_thresholds[3] = {70, 70, 70};
+int photoresistor_thresholds[3] = {60, 60, 60};
 
 int servo_open = 0;
 int servo_closed = 180;
