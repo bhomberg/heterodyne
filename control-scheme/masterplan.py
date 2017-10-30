@@ -72,13 +72,13 @@ print('Arduinos initialized')
 
 ## VARIABLES ##
 # variables for timekeeping
-max_time = 23*60 # 30 min * 60 s / min
+max_time = 11*60 # 30 min * 60 s / min
 timekeeping = [False, False, False, False]
 timeval = [16*60+25, 9*60+12, 4*60+44, 2*60+8]
 timesound = ["sound_bites/16-25.wav", "sound_bites/9-12.wav", "sound_bites/4-44.wav", "sound_bites/2-08.wav"]
 
 # variables for lights puzzle
-lightsound = ["sound_bites/lights/picky.wav", "sound_bites/lights/turnoff.wav", "sound_bites/lights/hurteyes.wav", "sound_bites/lights/doyoueven.wav", "sound_bites/lights/justdont.wav", "sound_bites/notdyinginthedark.wav"]
+lightsound = ["sound_bites/lights/picky.wav", "sound_bites/lights/turnoff.wav", "sound_bites/lights/hurteyes.wav", "sound_bites/lights/doyoueven.wav", "sound_bites/lights/justdont.wav", "sound_bites/notdie.wav"]
 
 # variables for gear puzzle
 gearsound = ["sound_bites/sendinghelp.wav", "sound_bites/goodbyefriends.wav"]
@@ -179,6 +179,7 @@ while(True):
               p = None
         if message == '20':
               done = True
+
               w = sa.WaveObject.from_wave_file(gearsound[1])
               p = w.play()
               p.wait_done()

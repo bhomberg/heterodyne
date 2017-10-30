@@ -309,14 +309,13 @@ void setup() {
   }
   pinMode(LED_BUILTIN, OUTPUT);
 
-  pinMode(22, INPUT_PULLUP);
   // Initial switch pins as INPUTs.
-//  for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
-//    int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
-//    if (pin != NO) {
-//      pinMode(pin, INPUT);      
-//    }
-//  }
+  for (int switch_index = 0; switch_index < GRIDSIZE * GRIDSIZE; switch_index++) {
+    int pin = getSwitchPin(getRow(switch_index), getCol(switch_index));
+    if (pin != NO) {
+      pinMode(pin, INPUT);      
+    }
+  }
   
   // PololuLedStripBase::interruptFriendly = true;
 
